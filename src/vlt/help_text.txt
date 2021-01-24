@@ -1,0 +1,33 @@
+
+help menu
+=========
+
+vlt <CMD> <ARGS/KWARGS>
+
+CMD     command flag for static mode, interactive mode, or help menu
+        [-i]
+        [-s] static'
+        [-h, --help] help menu
+
+ARGS/   commands for static mode. kwargs are
+KWARGS  derived from arg list by <-> demarcation. I.E.
+
+<CMD> arg_one -key_one value_one
+
+interactive mode
+================
+
+interactive mode takes procedural commands via either text
+or number, as depicted in each provided menu. I.E. given
+
+| 1) continue | 2) exit |
+
+the exit can be triggered by passing either <2> or <exit>.
+
+about
+=====
+
+This password manager is a simple SQLite database which uses
+symmetric encryption for persistent storage. The database 
+currently handles source, username, and password attributes.
+
