@@ -292,7 +292,7 @@ class Session:
             _list_db('archives')
             self._main()
 
-        elif db_settings_action in ('5', 'list path'):
+        elif db_settings_action in ('5', 'list db path'):
             _list_db('name')
             self._main()
         
