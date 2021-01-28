@@ -1,31 +1,22 @@
 import base64
 import json
 import os
+import random
 
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
-def derive_key(password):
-
+def derive_key(password, salt):
     password = str.encode(password)
-    salt = b'7\xe4\xf6\xa0\xb9\n\x89\xbaK\xee\x046\x06O\xcd\x90'
-
-    kdf = PBKDF2HMAC(
-        algorithm=hashes.SHA256(),
-        length=32,
-        salt=salt,
-        iterations=100000
-    )
-
+    salt = str.encode(salt)
+    kdf = PBKDF2HMAC(algorithm=hashes.SHA512(),length=32,salt=salt,iterations=100000)
     key = base64.urlsafe_b64encode(kdf.derive(password))
-
     return key
 
 class Rosetta:
-    def __init__(self, password):
-        self.key = derive_key(password)
-        self.rosetta = Fernet(self.key)
+    def __init__(self, password, salt):
+        self.rosetta = Fernet(derive_key(password, salt))
 
     def encrypt(self, text):
         text = str.encode(text)

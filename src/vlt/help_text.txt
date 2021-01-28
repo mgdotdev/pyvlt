@@ -4,18 +4,77 @@ help menu
 
 vlt <CMD> <ARGS/KWARGS>
 
-CMD     command flag for static mode, interactive mode, or help menu
-        [-i]
-        [-s] static'
-        [-h, --help] help menu
+CMD     command flag
 
 ARGS/   commands for static mode. kwargs are
 KWARGS  derived from arg list by <-> demarcation. I.E.
 
-<CMD> arg_one -key_one value_one
+<CMD> arg_one -key_one value_one arg_two
+
+static mode
+===========
+
+CMD
+        [-a, add]               add entry to db
+        [-e, exp, export]       export db to local directory
+        [-g, get]               get entry from db
+        [-h, --help]            help menu
+        [-l, lnk, link]         link vlt to external .db file
+        [-ls, ls, list]         list current/archived .db's
+        [-rm, rm, remove]       remove entry/entries from db
+        [-rs, reset]            reset key or table
+        [ipython]               open ipython terminal with db in scope
+
+
+command options
+---------------
+
+[<ALL>]
+
+KWARGS
+        [-k, --key] <KEY>       encryption key (not recommended to pass as flag,
+                                                if absent the vlt will prompt
+                                                for it)
+
+[add/get/remove]
+
+KWARGS
+        [-s] <SOURCE>           source to search against in db
+        [-u] <USERNAME>         username to search against in db
+        [-p] <PASSWORD>         password to search against in db       
+
+[archive]
+
+        [-n, --name] <FILENAME> filename for archived db
+
+[export]
+
+KWARGS
+        [-p, --path] <DIRPATH>  path of file directory in which to save db
+
+[link]
+
+KWARGS
+        [-f, --file] <FILENAME> path to database file to link
+        [-a, --archive] <INT>   archive number to link to db
+
+[list]
+
+ARGS
+        [ ]                     list config paths
+        [archives]              list archive paths and index values
+        [name]                  list current db name
+
+[reset]
+
+ARGS
+        [table]                 reset/clear table
+        [key]                   change encryption key
 
 interactive mode
 ================
+
+vlt -i
 
 interactive mode takes procedural commands via either text
 or number, as depicted in each provided menu. I.E. given
@@ -28,6 +87,6 @@ about
 =====
 
 This password manager is a simple SQLite database which uses
-symmetric encryption for persistent storage. The database 
-currently handles source, username, and password attributes.
-
+symmetric encryption for persistent storage and asymmetric encryption
+for table labeling. The database currently handles source, username, and 
+password attributes.

@@ -5,7 +5,7 @@ class TestRosetta:
     def test_encryption(self):
         password = 'password'
         expected = 'testing one two three'
-        stone = Rosetta(password)
+        stone = Rosetta(password, salt="ThisIsSalt")
         encrypted = stone.encrypt(expected)
         actual = stone.decrypt(encrypted)
         assert actual == expected
