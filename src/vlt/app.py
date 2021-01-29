@@ -114,7 +114,6 @@ def _get_from_db(self, *args, **kwargs):
         raise ValueError(
             "<get> requires a source, username, and/or password to search against."
         )
-    import pdb; pdb.set_trace()
     if source:
         df = df.loc[df['source'].str.contains(source)]
     if username:
