@@ -28,7 +28,7 @@ class Settings:
 
     def _init_config(self):
         if not os.path.isfile(os.path.join(HERE, "config.json")):
-            self._write(obj={})
+            self._write(obj={"print_format": None})
         return self._read
 
     @property    

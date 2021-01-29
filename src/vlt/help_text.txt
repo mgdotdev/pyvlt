@@ -1,4 +1,4 @@
-
+=========
 help menu
 =========
 
@@ -11,66 +11,84 @@ KWARGS  derived from arg list by <-> demarcation. I.E.
 
 <CMD> arg_one -key_one value_one arg_two
 
+===========
 static mode
 ===========
 
 CMD
-        [-a, add]               add entry to db
-        [-e, exp, export]       export db to local directory
+        [-a, +, add]            add entry to db
+        [-ar, archive]          move db to archives
+        [-e, edit]              edit db entry
+        [-ex, exp, export]      export db to local directory
         [-g, get]               get entry from db
         [-h, --help]            help menu
         [-l, lnk, link]         link vlt to external .db file
         [-ls, ls, list]         list current/archived .db's
-        [-rm, rm, remove]       remove entry/entries from db
+        [-rm, rm, -, remove]    remove entry from db
         [-rs, reset]            reset key or table
-        [ipython]               open ipython terminal with db in scope
+        [-s, settings]          set settings
+        
+        [ipython]               open ipython terminal with `self` in scope
 
-
+---------------
 command options
 ---------------
 
 [<ALL>]
 
 KWARGS
-        [-k, --key] <KEY>       encryption key (not recommended to pass as flag,
-                                                if absent the vlt will prompt
-                                                for it)
+        [-k, --key] <KEY>               encryption key (not recommended to pass 
+                                                as flag, if absent the vlt will 
+                                                prompt for it)
 
 [add/get/remove]
 
 KWARGS
-        [-s] <SOURCE>           source to search against in db
-        [-u] <USERNAME>         username to search against in db
-        [-p] <PASSWORD>         password to search against in db       
+        [-s] <SOURCE>                   source to search against in db
+        [-u] <USERNAME>                 username to search against in db
+        [-p] <PASSWORD>                 password to search against in db       
 
 [archive]
 
-        [-n, --name] <FILENAME> filename for archived db
+        [-n, --name] <FILENAME>         filename for archived db
 
 [export]
 
+ARGS
+        <DIRPATH>                       path of file directory in which to save db
+
 KWARGS
-        [-p, --path] <DIRPATH>  path of file directory in which to save db
+        [-p, --path] <DIRPATH>          path of file directory in which to save db
 
 [link]
 
+ARGS
+        <FILENAME>                      path to database file to link
+
 KWARGS
-        [-f, --file] <FILENAME> path to database file to link
-        [-a, --archive] <INT>   archive number to link to db
+        [-f, --file] <FILENAME>         path to database file to link
+        [-a, --archive] <INT>           archive number to link to db
 
 [list]
 
 ARGS
-        [ ]                     list config paths
-        [archives]              list archive paths and index values
-        [name]                  list current db name
+        [ ]                             list config objects
+        [archives]                      list archive paths and index values
+        [name]                          list current db name
 
 [reset]
 
 ARGS
-        [table]                 reset/clear table
-        [key]                   change encryption key
+        [table]                         reset/clear table
+        [key]                           change encryption key
+        [all]                           reset db file
 
+[settings]
+
+KWARGS
+        [-fmt, --format] [v, h, df]     print format
+
+================
 interactive mode
 ================
 
