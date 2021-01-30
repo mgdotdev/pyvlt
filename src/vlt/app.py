@@ -330,13 +330,13 @@ class Session:
     def __init__(self, key):
         self.settings = Settings()
         self.db = DataBase(
+            settings=self.settings,
             table=hashlib.pbkdf2_hmac(
                 hash_name='sha512', 
                 password=str.encode(key), 
                 salt=str.encode(self.settings.table_salt),
                 iterations=100000
-            ).hex(),
-            settings=self.settings
+            ).hex()
         ).init_db()
         self.rosetta = Rosetta(key, self.db.salt)
         self.df = self.db.get().applymap(self.rosetta.decrypt)
