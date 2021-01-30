@@ -9,6 +9,7 @@ from IPython import embed as open_ipython
 from .cmd_reader import reader
 from .encryption import Rosetta
 from .storage import DataBase
+from .settings import Settings
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PRINT_FORMAT_SETTINGS = ['df', 'v', 'h']
@@ -288,20 +289,29 @@ def _reset(self, *args, **kwargs):
         self.db.init_db()
         self.db.update_db(self.df.applymap(self.rosetta.encrypt))
         print('done.')
-    elif "all" in args:
+    elif "db" in args:
         confirm = input(
             'are you sure? This can not be undone. [y/n]\n$ '
         )
         if confirm == 'y':
-            print('\nINITIATING SELF DESTRUCT\n')
+            print('\ndeleting all data from .db\n')
             self.db._reset_db()
             print('done.')
             return False
         else:
             print('aborting...')
+    elif "app" in args:
+        confirm = input(
+            'are you sure? This can not be undone. [y/n]\n$ '
+        )
+        if confirm == 'y':
+            print('\ndeleting all internal .db files and removing config.\n')
+            shutil.rmtree(os.path.join(HERE, 'db'))
+            os.unlink(self.settings.name)
+            return False
     else:
         print('no reset parameter specified.')
-    return True
+        return True
 
 def _settings(*args, **kwargs):
     db = DataBase()
@@ -318,11 +328,17 @@ def _try_again(self):
 
 class Session:
     def __init__(self, key):
+        self.settings = Settings()
         self.db = DataBase(
-            table=hashlib.sha512(str.encode(key)).hexdigest()
+            table=hashlib.pbkdf2_hmac(
+                hash_name='sha512', 
+                password=str.encode(key), 
+                salt=str.encode(self.settings.table_salt),
+                iterations=100000
+            ).hex(),
+            settings=self.settings
         ).init_db()
         self.rosetta = Rosetta(key, self.db.salt)
-        self.settings = self.db.settings
         self.df = self.db.get().applymap(self.rosetta.decrypt)
 
     def _main(self):

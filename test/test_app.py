@@ -160,7 +160,7 @@ class TestOperations:
     def test_reset_db(self, full_session):
         init_salt = full_session.db.salt
         with patch('builtins.input', return_value="y"):
-            _reset(full_session, "all")
+            _reset(full_session, "db")
         actual = full_session.db.get().applymap(full_session.rosetta.decrypt).values.tolist()
         expected = Expectation("session_empty.json") 
         assert init_salt != full_session.db.salt

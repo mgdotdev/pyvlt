@@ -86,7 +86,8 @@ ARGS
 ARGS
         [table]                         reset/clear table
         [key]                           change encryption key
-        [all] -> [y/n]                  reset db file (requires y/n confirmation)
+        [db] -> [y/n]                   reset db file (requires y/n confirmation)
+        [app] -> [y/n]                  delete all internal db/config files
 
 [settings]
 
