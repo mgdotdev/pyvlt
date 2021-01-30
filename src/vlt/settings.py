@@ -25,6 +25,10 @@ class Settings:
     def settings(self):
         return self._settings
 
+    @property
+    def table_salt(self):
+        return TABLE_SALT
+
     def archive(self, path):
         try:
             if path not in [archive for archive in self._settings["archives"].values()]:
@@ -33,9 +37,6 @@ class Settings:
                 )
         except KeyError:
             self._settings["archives"] = {"0": path}
-
-    def table_salt(self):
-        return TABLE_SALT
 
     def update(self, obj):
         self._settings.update(obj)
