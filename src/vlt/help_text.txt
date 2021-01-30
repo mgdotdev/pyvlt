@@ -39,17 +39,22 @@ command options
 KWARGS
         [-k, --key] <KEY>               encryption key (not recommended to pass 
                                                 as flag, if absent the vlt will 
-                                                prompt for it)
+                                                prompt for it.)
 
-[add/get/remove]
+[add/get/edit/remove]
 
 KWARGS
         [-s] <SOURCE>                   source to search against in db
         [-u] <USERNAME>                 username to search against in db
         [-p] <PASSWORD>                 password to search against in db       
+        [-i] <INDEX>                    index of entry to select
 
 [archive]
 
+ARGS
+        <FILENAME>                      filename for archived db
+
+KWARGS
         [-n, --name] <FILENAME>         filename for archived db
 
 [export]
@@ -81,7 +86,7 @@ ARGS
 ARGS
         [table]                         reset/clear table
         [key]                           change encryption key
-        [all]                           reset db file
+        [all] -> [y/n]                  reset db file (requires y/n confirmation)
 
 [settings]
 

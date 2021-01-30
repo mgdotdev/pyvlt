@@ -50,10 +50,13 @@ def _add_to_db(self, *args, **kwargs):
     print('done.')
 
 def _archive(*args, **kwargs):
-    filename = (
-        kwargs.get('-n') or kwargs.get('--name') 
-        or input('\nplease enter a file name:\n$ ')
-    )
+    if args:
+        filename = args[0]
+    else:
+        filename = (
+            kwargs.get('-n') or kwargs.get('--name') 
+            or input('\nplease enter a file name:\n$ ')
+        )
     if not filename.endswith('.db'):
         filename += '.db'
     db = DataBase()
@@ -160,7 +163,7 @@ def _help_menu():
         print(f.read())
 
 def _link_db(*args, **kwargs):
-    if len(args) > 0:
+    if args:
         path = args[0]
     else:
         path = (
