@@ -1,4 +1,5 @@
 import os
+import IPython
 
 from mock import patch
 import pytest
@@ -7,7 +8,8 @@ from vlt.app import (
     _add_to_db,
     _remove_from_db,
     _get_from_db,
-    _edit_db
+    _edit_db,
+    _reset
 )
 from vlt.encryption import Rosetta
 from vlt.storage import DataBase
@@ -66,8 +68,10 @@ class TestOperations:
 
     def test_edit(self, full_session, capsys):
         _edit_db(full_session, **{
-            '-i': '4', '-s': "edit_source_4", 
-            '-u': "edit_username_4", '-p': "edit_password_4"}
+            '-i': '4', 
+            '-s': "edit_source_4", 
+            '-u': "edit_username_4", 
+            '-p': "edit_password_4"}
         )
         _get_from_db(full_session, "all", **{'--format': 'h'})
         actual = capsys.readouterr().out
@@ -116,6 +120,14 @@ class TestOperations:
         expected = Expectation("test_get_password.txt")
         assert actual == expected.data
 
+    def test_print_df(self, full_session, capsys):
+        _get_from_db(full_session, **{'--password': "password_3", "--format": 'h'})
+        _get_from_db(full_session, **{'--password': "password_3", "--format": 'v'})
+        _get_from_db(full_session, **{'--password': "password_3", "--format": 'df'})
+        actual = capsys.readouterr().out  
+        expected = Expectation("test_print_df.txt")
+        assert actual == expected.data
+
     def test_remove(self, full_session):
         _remove_from_db(full_session, **{'--index': '3'})
         actual = full_session.db.get().applymap(full_session.rosetta.decrypt).values.tolist()
@@ -129,4 +141,27 @@ class TestOperations:
         expected = Expectation("test_remove_no_index.json")
         assert actual == expected.data
         
+    def test_reset_key(self, full_session):
+        init_salt = full_session.db.salt
+        _reset(full_session, "key", **{"-k": "NewTestKey"})
+        actual = full_session.db.get().applymap(full_session.rosetta.decrypt).values.tolist()
+        expected = Expectation("session_full.json")
+        assert init_salt == full_session.db.salt
+        assert actual == expected.data
 
+    def test_reset_table(self, full_session):
+        init_salt = full_session.db.salt
+        _reset(full_session, "table")
+        actual = full_session.db.get().applymap(full_session.rosetta.decrypt).values.tolist()
+        expected = Expectation("session_empty.json")
+        assert init_salt == full_session.db.salt
+        assert actual == expected.data
+        
+    def test_reset_db(self, full_session):
+        init_salt = full_session.db.salt
+        with patch('builtins.input', return_value="y"):
+            _reset(full_session, "all")
+        actual = full_session.db.get().applymap(full_session.rosetta.decrypt).values.tolist()
+        expected = Expectation("session_empty.json") 
+        assert init_salt != full_session.db.salt
+        assert actual == expected.data             

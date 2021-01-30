@@ -216,7 +216,7 @@ def _print_df(df, option=None):
         else:
             for index, item in zip(indexes, df):
                 print(
-                    f"   INDEX: {index}\n"
+                    f"{index}.\n"
                     f"  SOURCE: {item[0]}\n"
                     f"USERNAME: {item[1]}\n"
                     f"PASSWORD: {item[2]}\n"
