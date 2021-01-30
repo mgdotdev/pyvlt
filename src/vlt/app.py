@@ -2,9 +2,11 @@ from getpass import getpass
 import hashlib
 import json
 import os
+import random
 import shutil
-
-from IPython import embed as open_ipython
+import secrets
+import string
+import uuid
 
 from .cmd_reader import reader
 from .encryption import Rosetta
@@ -14,6 +16,8 @@ from .settings import Settings
 HERE = os.path.dirname(os.path.abspath(__file__))
 PRINT_FORMAT_SETTINGS = ['df', 'v', 'h']
 TABLE_HEADERS = [' ', 'SOURCE', 'USERNAME', 'PASSWORD']
+DEFAULT_PASSWORD_LENGTH = 40
+MAX_PASSWORD_ITERATIONS = 500
 
 def main():
     cmd, args, kwargs = reader()
@@ -48,7 +52,7 @@ def _add_to_db(self, *args, **kwargs):
     )
     df = self.db.get().applymap(self.rosetta.decrypt)
     self.df = df
-    print('done.')
+    
 
 def _archive(*args, **kwargs):
     if args:
@@ -65,7 +69,7 @@ def _archive(*args, **kwargs):
     os.rename(db.settings["name"], archive_file)
     db.settings.archive(archive_file)
     db.settings._write()
-    print('done.')
+    
 
 def _edit_db(self, *args, **kwargs):
     index = kwargs.get('-i') or kwargs.get('--index') or _get_index(self, "edit")
@@ -89,7 +93,7 @@ def _edit_db(self, *args, **kwargs):
         df.loc[index, "password"] = password
     self.db.update_db(df.applymap(self.rosetta.encrypt))
     self.df = df
-    print("done.")
+    
     
 def _export_db(*args, **kwargs):
     if args:
@@ -112,7 +116,7 @@ def _export_db(*args, **kwargs):
             print('aborting...')
     else:
         shutil.copy2(db.settings["name"], path)
-        print('done.')
+        
 
 def _get_from_db(self, *args, **kwargs):
     format_option = (
@@ -122,7 +126,7 @@ def _get_from_db(self, *args, **kwargs):
 
     if args == () and not any(
         c in kwargs.keys() for c in (
-            '-s', '--source', '-u', '--username', '-p', '--password'
+            '-i', '--index', '-s', '--source', '-u', '--username', '-p', '--password'
         )
     ):
         args, kwargs = _request_search_terms()
@@ -134,13 +138,16 @@ def _get_from_db(self, *args, **kwargs):
     if "all" in args:
         return _print_df(df, format_option)
 
+    index = kwargs.get('-i') or kwargs.get('--index')
     source = kwargs.get('-s') or kwargs.get('--source')
     username = kwargs.get('-u') or kwargs.get('--username')
     password = kwargs.get('-p') or kwargs.get('--password')
-    if all(x==None for x in (source, username, password)):
+    if all(x==None for x in (index, source, username, password)):
         raise ValueError(
-            "<get> requires a source, username, and/or password to search against."
+            "<get> requires an index, source, username, and/or password to search against."
         )
+    if index:
+        df = df.loc[df.index == df.index[int(index)]]
     if source:
         df = df.loc[df['source'].str.contains(source)]
     if username:
@@ -152,7 +159,7 @@ def _get_from_db(self, *args, **kwargs):
 def _get_index(self, action):
     index = input(
         f"\npass the index value of the entry to {action}."
-        f"\nif unknown, press enter to search. \n$ "
+        f"\nif unknown, press enter to search.\n$ "
     )
     if not index:
         _get_from_db(self)
@@ -192,7 +199,7 @@ def _link_db(*args, **kwargs):
     if not db.salt:
         raise LookupError("passed .db file doesn't have a <salt> encryption token")
     db.settings._write()
-    print('done.')
+    
 
 def _list_db(*args, **kwargs):
     db = DataBase()
@@ -208,6 +215,47 @@ def _list_db(*args, **kwargs):
     else:
         print(json.dumps(db.settings.settings, indent=2, sort_keys=True))
 
+def _make_db_entry(self, *args, **kwargs):
+    password_length = int(kwargs.get("-l") or kwargs.get("--length") or DEFAULT_PASSWORD_LENGTH)
+    mode = kwargs.get("-v") or kwargs.get("--via") or "random"
+    omits = kwargs.get("-o") or kwargs.get("--omit") or ""
+    kwargs.update({"--password": _make_password(password_length, mode, omits)})
+    _add_to_db(self, *args, **kwargs)
+    kwargs.update({'--index': -1})
+    _get_from_db(self, *args, **kwargs)
+    
+def _make_password(password_length, mode, omits, iterations=0):
+    if iterations > MAX_PASSWORD_ITERATIONS:
+        raise RecursionError(
+            f"attempted password could not be made "
+            f"after {MAX_PASSWORD_ITERATIONS} iteration "
+            f"attempts. Consider adjusting the password "
+            f"length, the mode, or the omit characters."
+        )
+    elif mode == "uuid":
+        gen = str(uuid.uuid4())
+    elif mode == "hex":
+        gen = secrets.token_hex(password_length)
+    else:
+        char_types = (
+            string.ascii_lowercase, string.ascii_uppercase, 
+            string.digits, string.punctuation
+        )
+        chars_string = "".join(char_types)
+        gen = "".join(
+            [random.choice(char) for char in char_types] + 
+            [random.choice(chars_string) 
+            for _ in range(password_length - len(char_types))]
+        )[:password_length]
+    if any(c in gen for c in omits):
+        return _make_password(password_length, mode, omits, iterations=iterations+1)
+    return gen
+
+def _open_ipython(self):
+    from IPython import embed
+    print('\nvlt objects are callable through `self`.\n')
+    embed()
+
 def _print_df(df, option=None):
     if not option or option == 'df':
         print('\n', df, '\n')
@@ -218,6 +266,7 @@ def _print_df(df, option=None):
         if len(df) == 0:
             print("\nThe query produced zero results.\n")
         else:
+            print('\n')
             for index, item in zip(indexes, df):
                 print(
                     f"{index}.\n"
@@ -247,16 +296,15 @@ def _print_df(df, option=None):
 
 def _remove_from_db(self, *args, **kwargs):
     index = kwargs.get('-i') or kwargs.get('--index') or _get_index(self, "remove")
-    df = self.df[self.df.index != int(index)]
+    df = self.df[self.df.index != self.df.index[int(index)]]
     self.db.update_db(df.applymap(self.rosetta.encrypt))
     self.df = df
-    print('done.')
-
+    
 def _request_search_terms():
     search_term = input(
         '\nspecify search term(s):\n'
-        ' 1) source \t 3) password \n'
-        ' 2) username \n$ '
+        ' 1) index\t 3) username\n'
+        ' 2) source\t 4) password\n$ '
     )
     args, kwargs = [], {}
     if search_term == "":
@@ -266,58 +314,59 @@ def _request_search_terms():
         args.append("raw")
 
     if any(c in search_term for c in ('1', 'source')):
+        kwargs.update({'--index': input('\nspecify index:\n$ ')})
+
+    if any(c in search_term for c in ('2', 'source')):
         kwargs.update({'--source': input('\nspecify source:\n$ ')})
 
-    if any(c in search_term for c in ('2', 'username')):
+    if any(c in search_term for c in ('3', 'username')):
         kwargs.update({'--username': input('\nspecify username:\n$ ')})
 
-    if any(c in search_term for c in ('3', 'password')):
+    if any(c in search_term for c in ('4', 'password')):
         kwargs.update({'--password': input('\nspecify password:\n$ ')})
     return args, kwargs
 
 def _reset(self, *args, **kwargs):
-    if "table" in args:
-        self.db._drop_table()
-        self.db.init_db()
-        self.df = self.db.get().applymap(self.rosetta.decrypt)
-    elif "key" in args:
-        new_key = kwargs.get('-k') or kwargs.get('--key') or getpass('new key:\n$ ')
-        new_table = hashlib.pbkdf2_hmac(
-            hash_name='sha512', 
-            password=str.encode(new_key), 
-            salt=str.encode(self.settings.table_salt),
-            iterations=100000
-        ).hex()
-        self.rosetta = Rosetta(new_key, self.db.salt)
-        self.db._drop_table()
-        self.db._table = new_table
-        self.db.init_db()
-        self.db.update_db(self.df.applymap(self.rosetta.encrypt))
-        self.df = self.db.get().applymap(self.rosetta.decrypt)
-        print('done.')
-    elif "db" in args:
-        confirm = input(
-            'are you sure? This can not be undone. [y/n]\n$ '
-        )
-        if confirm == 'y':
+    confirm = input(
+        'are you sure? This can not be undone. [y/n]\n$ '
+    )
+    if confirm == 'y':
+        if "table" in args:
+            self.db._drop_table()
+            self.db.init_db()
+            self.df = self.db.get().applymap(self.rosetta.decrypt)
+            
+        elif "key" in args:
+            new_key = kwargs.get('-k') or kwargs.get('--key') or getpass('new key:\n$ ')
+            new_table = hashlib.pbkdf2_hmac(
+                hash_name='sha512', 
+                password=str.encode(new_key), 
+                salt=str.encode(self.settings.table_salt),
+                iterations=100000
+            ).hex()
+            self.rosetta = Rosetta(new_key, self.db.salt)
+            self.db._drop_table()
+            self.db._table = new_table
+            self.db.init_db()
+            self.db.update_db(self.df.applymap(self.rosetta.encrypt))
+            self.df = self.db.get().applymap(self.rosetta.decrypt)
+            
+        elif "db" in args:
             print('\ndeleting all data from .db\n')
             self.db._reset_db()
-            print('done.')
+            
             return False
-        else:
-            print('aborting...')
-    elif "app" in args:
-        confirm = input(
-            'are you sure? This can not be undone. [y/n]\n$ '
-        )
-        if confirm == 'y':
+        elif "app" in args:
             print('\ndeleting all internal .db files and removing config.\n')
             shutil.rmtree(os.path.join(HERE, 'db'))
             os.unlink(self.settings.name)
+            
             return False
+        else:
+            print('no reset parameter specified.')
     else:
-        print('no reset parameter specified.')
-        return True
+        print('aborting...')
+    return True
 
 def _settings(*args, **kwargs):
     db = DataBase()
@@ -325,7 +374,7 @@ def _settings(*args, **kwargs):
     if print_format in PRINT_FORMAT_SETTINGS:
         db.settings.update({"print_format": print_format})
     db.settings._write()
-    print('done.')
+    
 
 def _try_again(self):
     print('\naction not understood. Please try again, or type `exit` or `q` to quit\n')
@@ -350,28 +399,32 @@ class Session:
     def _main(self):
         action = input(
             '\nspecify action:\n'
-            ' 1) get \t 4) remove \n'
-            ' 2) add \t 5) exit \n'
-            ' 3) edit \t 6) settings \n$ '
+            ' 1) get   3) make   5) remove   7) exit\n'
+            ' 2) add   4) edit   6) settings\n$ '
         )
+
         if action in ('get', '1'):
             _get_from_db(self)
             self._main()
         elif action in ('add', '2'):
             _add_to_db(self)
             self._main()
-        elif action in ('edit', '3'):
+        elif action in ('make', '3'):
+            _make_db_entry(self)
+            self._main()
+        elif action in ('edit', '4'):
             _edit_db(self)
             self._main()
-        elif action in ("remove", '4'):
+        elif action in ("remove", '5'):
             _remove_from_db(self)
             self._main()
-        elif action in ('exit', 'q', '5'):
-            print('bye!\n')
         elif action in ('settings', '6'):
             self._settings_menu
+        elif action in ('exit', 'q', '7'):
+            print('bye!\n')
+
         elif action == 'ipython':
-            open_ipython()
+            _open_ipython(self)
             self._main()
         else:
             _try_again(self)
@@ -380,73 +433,44 @@ class Session:
     def _settings_menu(self):
         settings_action = input(
             '\nselect option:\n'
-            ' 1) change key \t 3) db settings\n'
-            ' 2) reset table  4) open IPython terminal\n$ '
+            ' 1) reset key\t 4) export db\t 6) list db path\n'
+            ' 2) reset table\t 5) archive db\t 7) list archives\n'
+            ' 3) link db\n$ '
         )
-        if settings_action in ('1', 'change key'):
+        if settings_action in ('1', 'reset key'):
             new_key = getpass('new key:\n$ ')
-            confirm = input(
-                'are you sure? this action can not be undone. [y/n]\n$ '
-            )
-            if confirm == 'y':
-                _reset(self, 'key', **{'--key': new_key})
-            else:
-                print('aborting...')
+            _reset(self, 'key', **{'--key': new_key})
             self._main()
         elif settings_action in ('2', 'reset table'):
-            confirm = input(
-                'are you sure? This can not be undone. [y/n]\n$ '
-            )
-            if confirm == 'y':
-                _reset(self, 'table')
-                print('done.')
-            else:
-                print('aborting...')
+            _reset(self, 'table')
             self._main()
-        elif settings_action in ('3', 'db settings'):
-            self._db_settings_menu
-        elif settings_action in ('4', 'ipython', 'open ipython terminal'):
-            print('\n')
-            open_ipython()
-            self._main()
-        elif settings_action == "RESET_ALL":
-            reset_all = _reset(self, "all")
-            if not reset_all:
-                self._main()
-        else:
-            _try_again(self)
-
-    @property
-    def _db_settings_menu(self):
-        db_settings_action = input(
-            '\nselect action:\n'
-            ' 1) link external db \t 4) list archives\n'
-            ' 2) export db \t\t 5) list db path\n'
-            ' 3) archive db\n$ '
-        )
-
-        if db_settings_action in ('1', 'link external db'):
+        elif settings_action in ('3', 'link db'):
             _link_db()
             print("restarting...")
             Session._interactive()
-
-        elif db_settings_action in ('2', 'export db'):
+        elif settings_action in ('4', 'export db'):
             _export_db()
             self._main()
-
-        elif db_settings_action in ('3', 'archive db'):
+        elif settings_action in ('5', 'archive db'):
             _archive()
             print("restarting...")
             Session._interactive()
-
-        elif db_settings_action in ('4', 'list archives'):
-            _list_db('archives')
-            self._main()
-
-        elif db_settings_action in ('5', 'list db path'):
+        elif settings_action in ('6', 'list db path'):
             _list_db('name')
             self._main()
-        
+        elif settings_action in ('7', 'list archives'):
+            _list_db('archives')
+            self._main()
+        elif settings_action == "RESET_DB":
+            if _reset(self, "db"):
+                self._main()
+            else:
+                print("TERMINATING")
+        elif settings_action == "RESET_APP":
+            if _reset(self, "app"):
+                self._main()
+            else:
+                print("TERMINATING")
         else:
             _try_again(self)
 
@@ -485,6 +509,9 @@ class Session:
         elif cmd in ('+', '-a', 'add'):
             return _add_to_db(self, *args, **kwargs)
 
+        elif cmd in ('-m', 'mk', 'make'):
+            return _make_db_entry(self, *args, **kwargs)
+
         elif cmd in ('-e', 'edit'):
             return _edit_db(self, *args, **kwargs)
 
@@ -495,5 +522,4 @@ class Session:
             return _reset(self, *args, **kwargs)
 
         elif cmd == 'ipython':
-            print('\nvlt objects are callable through `self`.\n')
-            open_ipython()
+            _open_ipython(self)

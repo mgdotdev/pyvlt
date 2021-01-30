@@ -24,11 +24,14 @@ CMD
         [-h, --help]            help menu
         [-l, lnk, link]         link vlt to external .db file
         [-ls, ls, list]         list current/archived .db's
+        [-m, mk, make]          make entry with vlt generated password
         [-rm, rm, -, remove]    remove entry from db
         [-rs, reset]            reset key or table
         [-s, set, settings]     set settings
         
         [ipython]               open ipython terminal with `self` in scope
+                                :note:  ipython is not a listed vlt requirement,
+                                        must have previously installed
 
 ---------------
 command options
@@ -44,11 +47,11 @@ KWARGS
 [add/get/edit/remove]
 
 KWARGS
+        [-i] <INDEX>                    relative index of entry to select
         [-s] <SOURCE>                   source to search against in db
         [-u] <USERNAME>                 username to search against in db
         [-p] <PASSWORD>                 password to search against in db       
-        [-i] <INDEX>                    index of entry to select
-
+        
 [archive]
 
 ARGS
@@ -81,6 +84,13 @@ ARGS
         [archives]                      list archive paths and index values
         [name]                          list current db name
 
+[make]
+
+KWARGS
+        [-v, --via] <hex|uuid|random>   mode for password generation
+        [-l, --length] <INT>            password length
+        [-o, --omit] <STRING>           string of characters to omit
+
 [reset]
 
 ARGS
@@ -92,7 +102,7 @@ ARGS
 [settings]
 
 KWARGS
-        [-fmt, --format] [v, h, df]     print format
+        [-fmt, --format] <v|h|df>       print format
 
 ================
 interactive mode

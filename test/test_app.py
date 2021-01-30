@@ -18,7 +18,7 @@ from vlt.settings import Settings
 from .base import Expectation
 
 class MockSession:
-    def __init__(self) -> None:
+    def __init__(self):
         self.db = DataBase(
             name="test.db", 
             settings=Settings(prefix="test")
@@ -143,7 +143,8 @@ class TestOperations:
         
     def test_reset_key(self, full_session):
         init_salt = full_session.db.salt
-        _reset(full_session, "key", **{"-k": "NewTestKey"})
+        with patch('builtins.input', return_value="y"):
+            _reset(full_session, "key", **{"-k": "NewTestKey"})
         actual = full_session.db.get().applymap(full_session.rosetta.decrypt).values.tolist()
         expected = Expectation("session_full.json")
         assert init_salt == full_session.db.salt
@@ -151,7 +152,8 @@ class TestOperations:
 
     def test_reset_table(self, full_session):
         init_salt = full_session.db.salt
-        _reset(full_session, "table")
+        with patch('builtins.input', return_value="y"):
+            _reset(full_session, "table")
         actual = full_session.db.get().applymap(full_session.rosetta.decrypt).values.tolist()
         expected = Expectation("session_empty.json")
         assert init_salt == full_session.db.salt
