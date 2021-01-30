@@ -24,6 +24,7 @@ setup(
     packages=find_packages(where="src"),
     package_dir={"": "src"},   
     install_requires=read_requirements("requirements.txt"),
+    tests_require=read_requirements("requirements_testing.txt"),
     package_data={"": ['*.txt']},
     include_package_data=True,
     entry_points={

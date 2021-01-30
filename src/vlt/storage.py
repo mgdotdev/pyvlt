@@ -6,6 +6,8 @@ import pandas as pd
 
 from .settings import Settings
 
+HERE = os.path.dirname(os.path.abspath(__file__))
+
 class DataBaseManager:
     def __init__(self, path):
         self.conn = sqlite3.connect(path)
@@ -37,21 +39,20 @@ class DataBaseManager:
         self.conn.commit()
 
 class DataBase:
-    def __init__(self, table="storage"):
-        self.settings = Settings()
-        self._table = table
+    def __init__(self, name=None, table=None, settings=None):
+        self.settings = (settings or Settings())
+        self._table = (table or "storage")
+        self._name = (name or "vlt.db")
 
     @property
     def name(self):
-        name = self.settings.name
+        name = self.settings["name"]
         if not name:
-            self.settings.update({
-                "name": os.path.join(
-                    os.path.dirname(os.path.abspath(__file__)), 'db', 'vlt.db'
-                )
-            })
+            self.settings.update(
+                {"name": os.path.join(HERE, 'db', self._name)}
+            )
             self.settings._write()
-            name = self.settings.name
+            name = self.settings["name"]
         if not os.path.isdir(os.path.dirname(name)):
             os.makedirs(os.path.dirname(name))
         return name

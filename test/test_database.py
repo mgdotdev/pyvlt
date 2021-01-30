@@ -1,23 +1,27 @@
 import os
+from sys import prefix
 from numpy.lib.function_base import sort_complex
 
 import pandas as pd
 
 import pytest
 
+from vlt.settings import Settings
 from vlt.storage import DataBase
 from vlt.encryption import Rosetta
 
 
 class TestDataBase:
     def test_meta_operations(self):
-        db = DataBase().init_db()
+        settings = Settings(prefix="test")
+        db = DataBase(name="test.db", settings=settings).init_db()
         assert sorted(db._table_names) == sorted(['settings', 'table_storage'])
         db._drop_table('table_storage')
         assert db._table_names == ['settings']
         db._reset_db()
         assert db._table_names == sorted(['settings', 'table_storage'])
         os.unlink(db.name)
+        os.unlink(settings.name)
 
 class TestDatabaseEncryption:
     def test_rosetta_io(self):

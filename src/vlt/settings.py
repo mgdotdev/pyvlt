@@ -4,11 +4,16 @@ import os.path
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 class Settings:
-    def __init__(self):
+    def __init__(self, prefix=None):
+        self._name = (prefix + "_config.json" if prefix else "config.json")
         self._settings = self._init_config()
 
-    def __getattr__(self, attr):
-        return self._settings.get(attr, [])
+    def __getitem__(self, item):
+        return self._settings.get(item, [])
+    
+    @property
+    def name(self):
+        return os.path.normpath(os.path.join(HERE, self._name))
 
     @property
     def settings(self):
@@ -27,17 +32,17 @@ class Settings:
             self._settings["archives"] = {"0": path}
 
     def _init_config(self):
-        if not os.path.isfile(os.path.join(HERE, "config.json")):
+        if not os.path.isfile(self.name):
             self._write(obj={"print_format": None})
         return self._read
 
     @property    
     def _read(self):
-        with open(os.path.join(HERE, "config.json"), 'r') as f:
+        with open(self.name, 'r') as f:
             return json.loads(f.read())
 
     def _write(self, obj=None):
         this = (self.settings if obj is None else obj)
-        with open(os.path.join(HERE, "config.json"), "w") as f:
+        with open(self.name, "w") as f:
             f.write(json.dumps(this, indent=2, sort_keys=True))
 
