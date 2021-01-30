@@ -26,7 +26,7 @@ CMD
         [-ls, ls, list]         list current/archived .db's
         [-rm, rm, -, remove]    remove entry from db
         [-rs, reset]            reset key or table
-        [-s, settings]          set settings
+        [-s, set, settings]     set settings
         
         [ipython]               open ipython terminal with `self` in scope
 

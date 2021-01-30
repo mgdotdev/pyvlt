@@ -282,12 +282,18 @@ def _reset(self, *args, **kwargs):
         self.df = self.db.get().applymap(self.rosetta.decrypt)
     elif "key" in args:
         new_key = kwargs.get('-k') or kwargs.get('--key') or getpass('new key:\n$ ')
-        new_table = hashlib.sha512(str.encode(new_key)).hexdigest()
+        new_table = hashlib.pbkdf2_hmac(
+            hash_name='sha512', 
+            password=str.encode(new_key), 
+            salt=str.encode(self.settings.table_salt),
+            iterations=100000
+        ).hex()
         self.rosetta = Rosetta(new_key, self.db.salt)
         self.db._drop_table()
         self.db._table = new_table
         self.db.init_db()
         self.db.update_db(self.df.applymap(self.rosetta.encrypt))
+        self.df = self.db.get().applymap(self.rosetta.decrypt)
         print('done.')
     elif "db" in args:
         confirm = input(
@@ -371,40 +377,6 @@ class Session:
             _try_again(self)
 
     @property
-    def _db_settings_menu(self):
-        db_settings_action = input(
-            '\nselect action:\n'
-            ' 1) link external db \t 4) list archives\n'
-            ' 2) export db \t\t 5) list db path\n'
-            ' 3) archive db\n$ '
-        )
-
-        if db_settings_action in ('1', 'link external db'):
-            _link_db()
-            print("restarting...")
-            Session._interactive()
-
-        elif db_settings_action in ('2', 'export db'):
-            _export_db()
-            self._main()
-
-        elif db_settings_action in ('3', 'archive db'):
-            _archive()
-            print("restarting...")
-            Session._interactive()
-
-        elif db_settings_action in ('4', 'list archives'):
-            _list_db('archives')
-            self._main()
-
-        elif db_settings_action in ('5', 'list db path'):
-            _list_db('name')
-            self._main()
-        
-        else:
-            _try_again(self)
-
-    @property
     def _settings_menu(self):
         settings_action = input(
             '\nselect option:\n'
@@ -444,6 +416,40 @@ class Session:
         else:
             _try_again(self)
 
+    @property
+    def _db_settings_menu(self):
+        db_settings_action = input(
+            '\nselect action:\n'
+            ' 1) link external db \t 4) list archives\n'
+            ' 2) export db \t\t 5) list db path\n'
+            ' 3) archive db\n$ '
+        )
+
+        if db_settings_action in ('1', 'link external db'):
+            _link_db()
+            print("restarting...")
+            Session._interactive()
+
+        elif db_settings_action in ('2', 'export db'):
+            _export_db()
+            self._main()
+
+        elif db_settings_action in ('3', 'archive db'):
+            _archive()
+            print("restarting...")
+            Session._interactive()
+
+        elif db_settings_action in ('4', 'list archives'):
+            _list_db('archives')
+            self._main()
+
+        elif db_settings_action in ('5', 'list db path'):
+            _list_db('name')
+            self._main()
+        
+        else:
+            _try_again(self)
+
     @staticmethod
     def _interactive():
         key = getpass('Please enter your vlt key:\n$ ')
@@ -465,7 +471,7 @@ class Session:
         if cmd in ('-ar', 'archive'):
             return _archive(*args, **kwargs)
 
-        if cmd in ('-s', 'settings'):
+        if cmd in ('-s', 'set', 'settings'):
             return _settings(*args, **kwargs)
 
         key = kwargs.get('-k') or kwargs.get("--key")
