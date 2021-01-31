@@ -8,6 +8,8 @@ import secrets
 import string
 import uuid
 
+import pandas as pd
+
 from .cmd_reader import reader
 from .encryption import Rosetta
 from .storage import DataBase
@@ -53,7 +55,6 @@ def _add_to_db(self, *args, **kwargs):
     df = self.db.get().applymap(self.rosetta.decrypt)
     self.df = df
     
-
 def _archive(*args, **kwargs):
     if args:
         filename = args[0]
@@ -69,7 +70,29 @@ def _archive(*args, **kwargs):
     os.rename(db.settings["name"], archive_file)
     db.settings.archive(archive_file)
     db.settings._write()
-    
+
+def _consume_csv(self, *args, **kwargs):
+    path = args[0] or kwargs.get('-p') or kwargs.get('--path') or input(
+        '\nplease enter a filepath to the consumable csv:\n$ '
+    )
+    path = os.path.normpath(path)
+    if not os.path.isfile(path):
+        raise FileNotFoundError("path does not represent a valid file.")
+    df = self.db.get().applymap(self.rosetta.decrypt)
+    new_df = pd.read_csv(path)
+    df = df.append(new_df, ignore_index=True)
+    self.db.update_db(df.applymap(self.rosetta.encrypt))
+    self.df = df
+
+def _dump_to_csv(self, *args, **kwargs):
+    path = args[0] or kwargs.get('-p') or kwargs.get('--path') or input(
+        '\nplease enter a directory path to copy the vlt db to:\n$ '
+    )
+    path = os.path.normpath(path)
+    if not os.access(os.path.dirname(path), os.W_OK):
+        raise NotADirectoryError("path is not a valid directory.")
+    df = self.db.get().applymap(self.rosetta.decrypt)
+    df.to_csv(path, index=False)
 
 def _edit_db(self, *args, **kwargs):
     index = kwargs.get('-i') or kwargs.get('--index') or _get_index(self, "edit")
@@ -94,29 +117,15 @@ def _edit_db(self, *args, **kwargs):
     self.db.update_db(df.applymap(self.rosetta.encrypt))
     self.df = df
     
-    
 def _export_db(*args, **kwargs):
-    if args:
-        path = args[0]
-    else:
-        path = kwargs.get('-p') or kwargs.get('--path') or input(
-            '\nplease enter a directory path to copy the vlt db to:\n$ '
-        )
+    path = args[0] or kwargs.get('-p') or kwargs.get('--path') or input(
+        '\nplease enter a directory path to copy the vlt db to:\n$ '
+    )
     path = os.path.normpath(path)
     db = DataBase()
-    if not os.path.isdir(path):
-        check = input(
-            'path passed is not a currently working directory. '
-            'Would you like to create it? [y/n]\n$ '
-        )
-        if check == 'y':
-            os.makedirs(path)
-            shutil.copy2(db.settings["name"], path)
-        else:
-            print('aborting...')
-    else:
-        shutil.copy2(db.settings["name"], path)
-        
+    if not os.access(os.path.dirname(path), os.W_OK):
+        raise NotADirectoryError("path is not a valid directory.")
+    shutil.copy2(db.settings["name"], path)       
 
 def _get_from_db(self, *args, **kwargs):
     format_option = (
@@ -354,13 +363,11 @@ def _reset(self, *args, **kwargs):
         elif "db" in args:
             print('\ndeleting all data from .db\n')
             self.db._reset_db()
-            
             return False
         elif "app" in args:
             print('\ndeleting all internal .db files and removing config.\n')
             shutil.rmtree(os.path.join(HERE, 'db'))
             os.unlink(self.settings.name)
-            
             return False
         else:
             print('no reset parameter specified.')
@@ -422,7 +429,6 @@ class Session:
             self._settings_menu
         elif action in ('exit', 'q', '7'):
             print('bye!\n')
-
         elif action == 'ipython':
             _open_ipython(self)
             self._main()
@@ -433,9 +439,10 @@ class Session:
     def _settings_menu(self):
         settings_action = input(
             '\nselect option:\n'
-            ' 1) reset key\t 4) export db\t 6) list db path\n'
-            ' 2) reset table\t 5) archive db\t 7) list archives\n'
-            ' 3) link db\n$ '
+            ' 1) reset key    4) list db path   7) dump db\n'
+            ' 2) reset table  5) list archives  8) export db\n'
+            ' 3) link db      6) consume csv    9) archive db\n'
+            '$ '
         )
         if settings_action in ('1', 'reset key'):
             new_key = getpass('new key:\n$ ')
@@ -448,19 +455,27 @@ class Session:
             _link_db()
             print("restarting...")
             Session._interactive()
-        elif settings_action in ('4', 'export db'):
+        elif settings_action in ('4', 'list db path'):
+            _list_db('name')
+            self._main()
+        elif settings_action in ('5', 'list archives'):
+            _list_db('archives')
+            self._main()
+        elif settings_action in ('6', 'consume csv'):
+            _consume_csv(self)
+            self._main()
+        elif settings_action in ('7', 'dump db'):
+            _dump_to_csv(self)
+            self._main()
+        elif settings_action in ('8', 'export db'):
             _export_db()
             self._main()
-        elif settings_action in ('5', 'archive db'):
+        elif settings_action in ('9', 'archive db'):
             _archive()
             print("restarting...")
             Session._interactive()
-        elif settings_action in ('6', 'list db path'):
-            _list_db('name')
-            self._main()
-        elif settings_action in ('7', 'list archives'):
-            _list_db('archives')
-            self._main()
+
+
         elif settings_action == "RESET_DB":
             if _reset(self, "db"):
                 self._main()
@@ -471,6 +486,8 @@ class Session:
                 self._main()
             else:
                 print("TERMINATING")
+        elif settings_action in ("q", "exit"):
+            print('bye!\n')
         else:
             _try_again(self)
 
@@ -511,6 +528,12 @@ class Session:
 
         elif cmd in ('-m', 'mk', 'make'):
             return _make_db_entry(self, *args, **kwargs)
+
+        elif cmd in ('-c', 'comsume'):
+            return _consume_csv(self, *args, **kwargs)
+
+        elif cmd in ('-d', "dump"):
+            return _dump_to_csv(self, *args, **kwargs)
 
         elif cmd in ('-e', 'edit'):
             return _edit_db(self, *args, **kwargs)
