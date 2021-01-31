@@ -3,12 +3,6 @@ import os.path
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
-# Changing this salt string will break compatibility
-# with other vlt instances, and will break vlt's ability
-# to decrypt data currently stored under this salt. 
-# Unless you know what you're doing, best not to touch this.
-TABLE_SALT = "»ûµQãDGïóê±PÊÚÐWò®Æ½¥ûdòjË¤Ó{Á½ÞÍÏ£ª¼ÙqÅç§EÎ¬õ¡"
-
 class Settings:
     def __init__(self, prefix=None):
         self._name = (prefix + "_config.json" if prefix else "config.json")
@@ -24,10 +18,6 @@ class Settings:
     @property
     def settings(self):
         return self._settings
-
-    @property
-    def table_salt(self):
-        return TABLE_SALT
 
     def archive(self, path):
         try:

@@ -10,23 +10,36 @@ from vlt.settings import Settings
 from vlt.storage import DataBase
 from vlt.encryption import Rosetta
 
+@pytest.fixture
+def settings_and_database():
+    settings = Settings(prefix="test")
+    database = DataBase(name="test.db", key="TestKey", settings=settings)
+    yield settings, database
+    os.unlink(database.name)
+    os.unlink(settings.name)    
+
 
 class TestDataBase:
-    def test_meta_operations(self):
-        settings = Settings(prefix="test")
-        db = DataBase(name="test.db", settings=settings).init_db()
-        assert sorted(db._table_names) == sorted(['settings', 'table_storage'])
-        db._drop_table('table_storage')
-        assert db._table_names == ['settings']
-        db._reset_db()
-        assert db._table_names == sorted(['settings', 'table_storage'])
-        os.unlink(db.name)
-        os.unlink(settings.name)
+    def test_default_tables(self, settings_and_database):
+        _, database = settings_and_database
+        table_names = database._table_names
+        assert "salts" in table_names
+        table_names.remove("salts")
+        assert all(name.startswith("table_") for name in table_names)
+
+    def test_reset(self, settings_and_database):
+        _, database = settings_and_database
+        database._reset_db()
+        table_names = database._table_names
+        assert "salts" in table_names
+        table_names.remove("salts")
+        assert all(name.startswith("table_") for name in table_names)        
+
 
 class TestDatabaseEncryption:
-    def test_rosetta_io(self):
+    def test_database_io(self, settings_and_database):
         stone = Rosetta(password='password', salt="ThisIsSalt") 
-        db = DataBase().init_db()
+        _, database = settings_and_database
         test_sources = ['facebook', 'google', 'microsoft']
         expected = [
             [
@@ -36,7 +49,6 @@ class TestDatabaseEncryption:
             ] 
             for i in range(12)
         ]
-        db.add_list_of_lists(expected)
-        actual = db.get().values.tolist()
+        database.add_list_of_lists(expected)
+        actual = database.get().values.tolist()
         assert actual == expected
-        os.unlink(db.name)

@@ -1,5 +1,5 @@
+import functools
 from getpass import getpass
-import hashlib
 import json
 import os
 import random
@@ -24,11 +24,11 @@ MAX_PASSWORD_ITERATIONS = 500
 def main():
     cmd, args, kwargs = reader()
     if cmd in {'-i', '--interactive'}:
-        Session._interactive()
+        Session.interactive()
     elif cmd in {'-h', '--help'}:
         _help_menu()
     else:
-        Session._static(cmd, args, kwargs)
+        Session.static(cmd, args, kwargs)
 
 def _add_to_db(self, *args, **kwargs):
     source = (
@@ -70,6 +70,12 @@ def _archive(*args, **kwargs):
     os.rename(db.settings["name"], archive_file)
     db.settings.archive(archive_file)
     db.settings._write()
+
+def _confirm():
+    confirm = input('are you sure? This can not be undone. [y/n]\n$ ')
+    if confirm == 'y':
+        return True
+    return False
 
 def _consume_csv(self, *args, **kwargs):
     path = args[0] or kwargs.get('-p') or kwargs.get('--path') or input(
@@ -187,8 +193,9 @@ def _link_db(*args, **kwargs):
             kwargs.get('-f') or kwargs.get('--file') 
             or kwargs.get("-a") or kwargs.get("--archive") 
             or input(
-                '\nplease enter a filepath to the external vlt db, '
-                'or an archive index value:\n$ '
+                'please enter a filepath to the external vlt db, '
+                'or an archive index value:\n'
+                '$ '
             )
         )
     db = DataBase()
@@ -196,7 +203,9 @@ def _link_db(*args, **kwargs):
         pass
     elif path in db.settings["archives"].keys():
         path = db.settings["archives"][path]
-    if not (os.path.isfile(path) and path.endswith('.db')):
+    if not os.path.isfile(path):
+        raise FileNotFoundError('argument passed is not a valid file.')
+    if not path.endswith('.db'):
         raise FileNotFoundError('argument passed should be of filetype .db')
     if db.settings["name"]:
         db.settings.archive(db.settings["name"])
@@ -242,23 +251,26 @@ def _make_password(password_length, mode, omits, iterations=0):
             f"length, the mode, or the omit characters."
         )
     elif mode == "uuid":
-        gen = str(uuid.uuid4())
+        result = str(uuid.uuid4())
     elif mode == "hex":
-        gen = secrets.token_hex(password_length)
+        result = secrets.token_hex(password_length)
     else:
-        char_types = (
+        char_types = [
             string.ascii_lowercase, string.ascii_uppercase, 
             string.digits, string.punctuation
-        )
+        ]
+        for index, types in enumerate(char_types):
+            char_types[index] = functools.reduce(
+                lambda t, i: t.replace(i, ""), [types, *omits]
+            )
+        char_types = [t for t in char_types if t != '']
         chars_string = "".join(char_types)
-        gen = "".join(
+        result = "".join(
             [random.choice(char) for char in char_types] + 
-            [random.choice(chars_string) 
+            [random.choice(chars_string)
             for _ in range(password_length - len(char_types))]
         )[:password_length]
-    if any(c in gen for c in omits):
-        return _make_password(password_length, mode, omits, iterations=iterations+1)
-    return gen
+    return result
 
 def _open_ipython(self):
     from IPython import embed
@@ -313,7 +325,8 @@ def _request_search_terms():
     search_term = input(
         '\nspecify search term(s):\n'
         ' 1) index\t 3) username\n'
-        ' 2) source\t 4) password\n$ '
+        ' 2) source\t 4) password\n'
+        '$ '
     )
     args, kwargs = [], {}
     if search_term == "":
@@ -336,43 +349,34 @@ def _request_search_terms():
     return args, kwargs
 
 def _reset(self, *args, **kwargs):
-    confirm = input(
-        'are you sure? This can not be undone. [y/n]\n$ '
-    )
-    if confirm == 'y':
-        if "table" in args:
+    if len(args) == 0:
+        print('no reset parameter specified.')
+    elif "key" in args:
+        new_key = kwargs.get('-k') or kwargs.get('--key') or getpass('new key:\n$ ')
+        if _confirm():
             self.db._drop_table()
-            self.db.init_db()
-            self.df = self.db.get().applymap(self.rosetta.decrypt)
-            
-        elif "key" in args:
-            new_key = kwargs.get('-k') or kwargs.get('--key') or getpass('new key:\n$ ')
-            new_table = hashlib.pbkdf2_hmac(
-                hash_name='sha512', 
-                password=str.encode(new_key), 
-                salt=str.encode(self.settings.table_salt),
-                iterations=100000
-            ).hex()
-            self.rosetta = Rosetta(new_key, self.db.salt)
-            self.db._drop_table()
-            self.db._table = new_table
-            self.db.init_db()
+            self.db = DataBase(key=new_key, settings=self.settings)
+            self.rosetta = Rosetta(new_key, self.db.get_salt(self.db.table))
             self.db.update_db(self.df.applymap(self.rosetta.encrypt))
             self.df = self.db.get().applymap(self.rosetta.decrypt)
-            
-        elif "db" in args:
-            print('\ndeleting all data from .db\n')
-            self.db._reset_db()
-            return False
-        elif "app" in args:
-            print('\ndeleting all internal .db files and removing config.\n')
-            shutil.rmtree(os.path.join(HERE, 'db'))
-            os.unlink(self.settings.name)
-            return False
-        else:
-            print('no reset parameter specified.')
+            return True
+    elif "table" in args and _confirm():
+        self.db._drop_table()
+        self.db.init_db()
+        self.df = self.db.get().applymap(self.rosetta.decrypt)
+        return True        
+    elif "db" in args and _confirm():
+        print('\ndeleting all data from .db\n')
+        self.db._reset_db()
+        return False
+    elif "app" in args and _confirm():
+        print('\ndeleting all internal .db files and removing config.\n')
+        shutil.rmtree(os.path.join(HERE, 'db'))
+        os.unlink(self.settings.name)
+        return False
     else:
-        print('aborting...')
+        print('passed argument does not match any reset protocols.')
+    print('aborting...')
     return True
 
 def _settings(*args, **kwargs):
@@ -382,108 +386,89 @@ def _settings(*args, **kwargs):
         db.settings.update({"print_format": print_format})
     db.settings._write()
     
-
 def _try_again(self):
     print('\naction not understood. Please try again, or type `exit` or `q` to quit\n')
-    self._main()
+    self.main()
 
 
 class Session:
-    def __init__(self, key):
-        self.settings = Settings()
-        self.db = DataBase(
-            settings=self.settings,
-            table=hashlib.pbkdf2_hmac(
-                hash_name='sha512', 
-                password=str.encode(key), 
-                salt=str.encode(self.settings.table_salt),
-                iterations=100000
-            ).hex()
-        ).init_db()
-        self.rosetta = Rosetta(key, self.db.salt)
+    def __init__(self, key=None, prefix=None, name=None):
+        self.settings = Settings(prefix=prefix)
+        self.db = DataBase(name=name, key=key, settings=self.settings)
+        self.rosetta = Rosetta(key=key, salt=self.db.get_salt(self.db.table))
         self.df = self.db.get().applymap(self.rosetta.decrypt)
 
-    def _main(self):
-        action = input(
-            '\nspecify action:\n'
-            ' 1) get   3) make   5) remove   7) exit\n'
-            ' 2) add   4) edit   6) settings\n$ '
-        )
+    def main(self):
+        action = self.main_action()
 
         if action in ('get', '1'):
             _get_from_db(self)
-            self._main()
+            self.main()
         elif action in ('add', '2'):
             _add_to_db(self)
-            self._main()
+            self.main()
         elif action in ('make', '3'):
             _make_db_entry(self)
-            self._main()
+            self.main()
         elif action in ('edit', '4'):
             _edit_db(self)
-            self._main()
+            self.main()
         elif action in ("remove", '5'):
             _remove_from_db(self)
-            self._main()
+            self.main()
         elif action in ('settings', '6'):
-            self._settings_menu
+            self.settings_menu()
         elif action in ('exit', 'q', '7'):
             print('bye!\n')
         elif action == 'ipython':
             _open_ipython(self)
-            self._main()
+            self.main()
         else:
             _try_again(self)
 
-    @property
-    def _settings_menu(self):
-        settings_action = input(
-            '\nselect option:\n'
-            ' 1) reset key    4) list db path   7) dump db\n'
-            ' 2) reset table  5) list archives  8) export db\n'
-            ' 3) link db      6) consume csv    9) archive db\n'
-            '$ '
-        )
+
+    def settings_menu(self):
+        settings_action = self.settings_action()
+
         if settings_action in ('1', 'reset key'):
-            new_key = getpass('new key:\n$ ')
+            new_key = getpass('new key:')
             _reset(self, 'key', **{'--key': new_key})
-            self._main()
+            self.main()
         elif settings_action in ('2', 'reset table'):
             _reset(self, 'table')
-            self._main()
+            self.main()
         elif settings_action in ('3', 'link db'):
             _link_db()
             print("restarting...")
-            Session._interactive()
+            Session.interactive()
         elif settings_action in ('4', 'list db path'):
             _list_db('name')
-            self._main()
+            self.main()
         elif settings_action in ('5', 'list archives'):
             _list_db('archives')
-            self._main()
+            self.main()
         elif settings_action in ('6', 'consume csv'):
             _consume_csv(self)
-            self._main()
+            self.main()
         elif settings_action in ('7', 'dump db'):
             _dump_to_csv(self)
-            self._main()
+            self.main()
         elif settings_action in ('8', 'export db'):
             _export_db()
-            self._main()
+            self.main()
         elif settings_action in ('9', 'archive db'):
             _archive()
             print("restarting...")
-            Session._interactive()
-
+            Session.interactive()
 
         elif settings_action == "RESET_DB":
             if _reset(self, "db"):
-                self._main()
+                self.main()
             else:
                 print("TERMINATING")
         elif settings_action == "RESET_APP":
             if _reset(self, "app"):
-                self._main()
+                self.main()
             else:
                 print("TERMINATING")
         elif settings_action in ("q", "exit"):
@@ -492,13 +477,13 @@ class Session:
             _try_again(self)
 
     @staticmethod
-    def _interactive():
+    def interactive():
         key = getpass('Please enter your vlt key:\n$ ')
         self = Session(key)
-        self._main()
+        self.main()
 
     @staticmethod
-    def _static(cmd, args, kwargs):
+    def static(cmd, args, kwargs):
 
         if cmd in ('-l', 'lnk', 'link'):
             return _link_db(*args, **kwargs)
@@ -529,7 +514,7 @@ class Session:
         elif cmd in ('-m', 'mk', 'make'):
             return _make_db_entry(self, *args, **kwargs)
 
-        elif cmd in ('-c', 'comsume'):
+        elif cmd in ('-c', 'consume'):
             return _consume_csv(self, *args, **kwargs)
 
         elif cmd in ('-d', "dump"):
@@ -546,3 +531,23 @@ class Session:
 
         elif cmd == 'ipython':
             _open_ipython(self)
+        
+        else:
+            print("command not understood, no action taken.\n")
+
+    def _main_action(self):
+        return input(
+            '\nspecify action:\n'
+            ' 1) get   3) make   5) remove   7) exit\n'
+            ' 2) add   4) edit   6) settings\n'
+            '$ '
+        )
+
+    def _settings_action(self):
+        return input(
+            '\nselect option:\n'
+            ' 1) reset key    4) list db path   7) dump db\n'
+            ' 2) reset table  5) list archives  8) export db\n'
+            ' 3) link db      6) consume csv    9) archive db\n'
+            '$ '
+        )

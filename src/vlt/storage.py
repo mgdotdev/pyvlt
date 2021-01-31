@@ -1,3 +1,4 @@
+import hashlib
 import os
 import random
 import sqlite3
@@ -5,8 +6,12 @@ import sqlite3
 import pandas as pd
 
 from .settings import Settings
+from .encryption import Rosetta
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+
+def make_salt():
+    return "".join([chr(random.randint(0,255)) for _ in range(64)])
 
 class DataBaseManager:
     def __init__(self, path):
@@ -39,11 +44,17 @@ class DataBaseManager:
         self.conn.commit()
 
 class DataBase:
-    def __init__(self, name=None, table=None, settings=None):
-        self.settings = (settings or Settings())
-        self._table = (table or "storage")
+    def __init__(self, name=None, settings=None, key=None):
         self._name = (name or "vlt.db")
-
+        self.settings = (settings or Settings())
+        self._table = hashlib.pbkdf2_hmac(
+            hash_name='sha512', 
+            password=str.encode(key), 
+            salt=str.encode(self.table_salt),
+            iterations=100000
+        ).hex()
+        self.init_db()
+        
     @property
     def name(self):
         name = self.settings["name"]
@@ -62,13 +73,47 @@ class DataBase:
         return "table_" + self._table
 
     @property
-    def salt(self):
+    def table_salt(self):
+        if not self.check_table_exists("salts"):
+            self.init_salts()
+        return self.get_salt("table_salt")
+
+    def init_salts(self):
+        self.execute(
+            f"""
+            CREATE TABLE IF NOT EXISTS salts (
+                id BLOB,
+                salt BLOB
+            )
+            """,
+            commit=False
+        )
+
+        self.add_salt(
+            "table_salt", 
+            make_salt()
+        )
+
+    def get_salt(self, _id):
         with DataBaseManager(self.name) as sql:
-            salt = sql.execute(
-                """SELECT salt FROM settings""",
+            salt = [item[0] for item in sql.execute(
+                f"SELECT salt FROM salts WHERE id = '{_id}';",
                 r=False
-            ).fetchone()
+            )]
+        if salt:
             return salt[0]
+        salt = make_salt()
+        self.add_salt(self.table, salt)            
+        return salt
+
+    def add_salt(self, _id, table_salt):
+        self.execute(
+            f"""
+            INSERT INTO salts (
+                id, salt
+            ) VALUES (?, ?)
+            """, (_id, table_salt)
+        )       
 
     def execute(self, *args, commit=True):
         with DataBaseManager(self.name) as sql:
@@ -88,8 +133,8 @@ class DataBase:
         return False
 
     def init_db(self):
-        if not self.check_table_exists("settings"):
-            self.init_settings()
+        if not self.check_table_exists("salts"):
+            self.init_salts()
 
         self.execute(
             f"""
@@ -103,31 +148,13 @@ class DataBase:
         )
         return self
 
-    def init_settings(self):
-        self.execute(
-            f"""
-            CREATE TABLE IF NOT EXISTS settings (
-                salt TEXT
-            )
-            """,
-            commit=False
-        )
-
-        self.execute(
-            f"""
-            INSERT INTO settings (
-                salt
-            ) VALUES (?)
-            """, ["".join([chr(random.randint(65,255)) for _ in range(100)])]
-        )
-
     def add(self, source, username, password):
         self.execute(
             f"""
             INSERT OR IGNORE INTO {self.table} (
                 source, username, password
             ) VALUES (?, ?, ?)
-            """, [source, username, password]
+            """, (source, username, password)
         )
 
     def update_db(self, df):
@@ -147,20 +174,19 @@ class DataBase:
             """, list_of_lists
         )        
 
-    def get(self):
+    def get(self, table=None):
         with DataBaseManager(self.name) as sql:
-            df = pd.read_sql_query(
-                f"""
-                SELECT source, username, password FROM {self.table}
-                """,
+            if table:
+                return pd.read_sql_query(f"SELECT * FROM {table}", sql.conn)
+            return pd.read_sql_query(
+                f"SELECT source, username, password FROM {self.table}",
                 sql.conn
             )
-        return df
 
     @property        
     def _table_names(self):
         with DataBaseManager(self.name) as sql:
-            names = [x[0] for x in sql.execute(
+            names = [item[0] for item in sql.execute(
                 "SELECT name FROM sqlite_master WHERE type='table'",
                 r=False
             )]
