@@ -38,7 +38,7 @@ class TestDataBase:
 
 class TestDatabaseEncryption:
     def test_database_io(self, settings_and_database):
-        stone = Rosetta(password='password', salt="ThisIsSalt") 
+        stone = Rosetta(key='password', salt="ThisIsSalt") 
         _, database = settings_and_database
         test_sources = ['facebook', 'google', 'microsoft']
         expected = [

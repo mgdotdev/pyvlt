@@ -17,8 +17,9 @@ from .settings import Settings
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PRINT_FORMAT_SETTINGS = ['df', 'v', 'h']
+MAKE_MODE_SETTINGS = ['uuid', 'hex', 'random']
 TABLE_HEADERS = [' ', 'SOURCE', 'USERNAME', 'PASSWORD']
-DEFAULT_PASSWORD_LENGTH = 40
+DEFAULT_PASSWORD_LENGTH = 42
 MAX_PASSWORD_ITERATIONS = 500
 
 def main():
@@ -65,11 +66,11 @@ def _archive(*args, **kwargs):
         )
     if not filename.endswith('.db'):
         filename += '.db'
-    db = DataBase()
-    archive_file = os.path.join(os.path.dirname(db.settings["name"]), filename)
-    os.rename(db.settings["name"], archive_file)
-    db.settings.archive(archive_file)
-    db.settings._write()
+    settings = Settings()
+    archive_file = os.path.join(os.path.dirname(settings["name"]), filename)
+    os.rename(settings["name"], archive_file)
+    settings.archive(archive_file)
+    settings._write()
 
 def _confirm():
     confirm = input('are you sure? This can not be undone. [y/n]\n$ ')
@@ -128,10 +129,10 @@ def _export_db(*args, **kwargs):
         '\nplease enter a directory path to copy the vlt db to:\n$ '
     )
     path = os.path.normpath(path)
-    db = DataBase()
+    settings = Settings()
     if not os.access(os.path.dirname(path), os.W_OK):
         raise NotADirectoryError("path is not a valid directory.")
-    shutil.copy2(db.settings["name"], path)       
+    shutil.copy2(settings["name"], path)       
 
 def _get_from_db(self, *args, **kwargs):
     format_option = (
@@ -198,45 +199,60 @@ def _link_db(*args, **kwargs):
                 '$ '
             )
         )
-    db = DataBase()
-    if not db.settings["archives"]:
+    settings = Settings()
+    if not settings["archives"]:
         pass
-    elif path in db.settings["archives"].keys():
-        path = db.settings["archives"][path]
+    elif path in settings["archives"].keys():
+        path = settings["archives"][path]
     if not os.path.isfile(path):
         raise FileNotFoundError('argument passed is not a valid file.')
     if not path.endswith('.db'):
         raise FileNotFoundError('argument passed should be of filetype .db')
-    if db.settings["name"]:
-        db.settings.archive(db.settings["name"])
-        db.settings.update({"name": path})
+    if settings["name"]:
+        settings.archive(settings["name"])
+        settings.update({"name": path})
     else:    
-        db.settings.update({"name": path})
+        settings.update({"name": path})
     if not db.check_table_exists('settings'):
         raise LookupError("passed .db file doesn't have <settings> table")
     if not db.salt:
         raise LookupError("passed .db file doesn't have a <salt> encryption token")
-    db.settings._write()
+    settings._write()
     
 
 def _list_db(*args, **kwargs):
-    db = DataBase()
+    settings = Settings()
     if "archives" in args:
-        archives = db.settings["archives"]
+        archives = settings["archives"]
         if type(archives) == dict:
             for key, value in archives.items():
                 print("{:>5}: {}".format(int(key), value))
         else:
             print('None')
     elif "name" in args:
-        print("    -  " + db.settings["name"])
+        print("    -  " + settings["name"])
     else:
-        print(json.dumps(db.settings.settings, indent=2, sort_keys=True))
+        print(json.dumps(settings.settings, indent=2, sort_keys=True))
 
 def _make_db_entry(self, *args, **kwargs):
-    password_length = int(kwargs.get("-l") or kwargs.get("--length") or DEFAULT_PASSWORD_LENGTH)
-    mode = kwargs.get("-v") or kwargs.get("--via") or "random"
-    omits = kwargs.get("-o") or kwargs.get("--omit") or ""
+    password_length = int(
+        kwargs.get("-l") 
+        or kwargs.get("--length") 
+        or self.settings["default_password_length"] 
+        or DEFAULT_PASSWORD_LENGTH
+    )
+    omits = (
+        kwargs.get("-o") 
+        or kwargs.get("--omit") 
+        or self.settings["default_omit_chars"]
+        or ""
+    )
+    mode = (
+        kwargs.get("-v") 
+        or kwargs.get("--via") 
+        or self.settings["default_make_mode"]
+        or "random"
+    )
     kwargs.update({"--password": _make_password(password_length, mode, omits)})
     _add_to_db(self, *args, **kwargs)
     kwargs.update({'--index': -1})
@@ -380,11 +396,20 @@ def _reset(self, *args, **kwargs):
     return True
 
 def _settings(*args, **kwargs):
-    db = DataBase()
+    settings = Settings()
     print_format = kwargs.get("-fmt") or kwargs.get("--format")
     if print_format in PRINT_FORMAT_SETTINGS:
-        db.settings.update({"print_format": print_format})
-    db.settings._write()
+        settings.update({"print_format": print_format})
+    default_password_length = kwargs.get("-l") or kwargs.get("--length")
+    if default_password_length:
+        settings.update({"default_password_length": default_password_length})
+    omits = kwargs.get("-o") or kwargs.get("--omit")
+    if omits:
+        settings.update({"default_omit_chars": omits})
+    via = kwargs.get("-v") or kwargs.get("--via")
+    if via in MAKE_MODE_SETTINGS:
+        settings.update({"default_make_mode": via})
+    settings._write()
     
 def _try_again(self):
     print('\naction not understood. Please try again, or type `exit` or `q` to quit\n')
