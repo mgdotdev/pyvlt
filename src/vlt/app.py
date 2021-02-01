@@ -17,7 +17,6 @@ from .settings import Settings
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PRINT_FORMAT_SETTINGS = ['df', 'v', 'h']
-MAKE_MODE_SETTINGS = ['uuid', 'hex', 'random']
 TABLE_HEADERS = [' ', 'SOURCE', 'USERNAME', 'PASSWORD']
 DEFAULT_PASSWORD_LENGTH = 42
 MAX_PASSWORD_ITERATIONS = 500
@@ -267,25 +266,36 @@ def _make_password(password_length, mode, omits, iterations=0):
             f"length, the mode, or the omit characters."
         )
     elif mode == "uuid":
-        result = str(uuid.uuid4())
+        return str(uuid.uuid4())
     elif mode == "hex":
-        result = secrets.token_hex(password_length)
-    else:
-        char_types = [
-            string.ascii_lowercase, string.ascii_uppercase, 
-            string.digits, string.punctuation
-        ]
-        for index, types in enumerate(char_types):
-            char_types[index] = functools.reduce(
-                lambda t, i: t.replace(i, ""), [types, *omits]
-            )
-        char_types = [t for t in char_types if t != '']
-        chars_string = "".join(char_types)
-        result = "".join(
-            [random.choice(char) for char in char_types] + 
-            [random.choice(chars_string)
-            for _ in range(password_length - len(char_types))]
-        )[:password_length]
+        return secrets.token_hex(password_length)
+
+    if mode == "random":
+        mode += 'loweruppernumericpunctuation'
+    elif 'alpha' in mode:
+        mode += 'lowerupper'
+
+    char_types = []
+    if 'lower' in mode:
+        char_types.append(string.ascii_lowercase)
+    if 'upper' in mode:
+        char_types.append(string.ascii_uppercase)
+    if 'numeric' in mode:
+        char_types.append(string.digits)
+    if 'punctuation' in mode:
+        char_types.append(string.punctuation)
+
+    for index, types in enumerate(char_types):
+        char_types[index] = functools.reduce(
+            lambda t, i: t.replace(i, ""), [types, *omits]
+        )
+    char_types = [t for t in char_types if t != '']
+    chars_string = "".join(char_types)
+    result = "".join(
+        [random.choice(char) for char in char_types] + 
+        [random.choice(chars_string)
+        for _ in range(password_length - len(char_types))]
+    )[:password_length]
     return result
 
 def _open_ipython(self):
@@ -402,13 +412,22 @@ def _settings(*args, **kwargs):
         settings.update({"print_format": print_format})
     default_password_length = kwargs.get("-l") or kwargs.get("--length")
     if default_password_length:
-        settings.update({"default_password_length": default_password_length})
+        if default_password_length == "None":
+            settings.pop("default_password_length")
+        else:
+            settings.update({"default_password_length": default_password_length})
     omits = kwargs.get("-o") or kwargs.get("--omit")
     if omits:
-        settings.update({"default_omit_chars": omits})
+        if omits == 'None':
+            settings.pop("default_omit_chars")
+        else:
+            settings.update({"default_omit_chars": omits})
     via = kwargs.get("-v") or kwargs.get("--via")
-    if via in MAKE_MODE_SETTINGS:
-        settings.update({"default_make_mode": via})
+    if via:
+        if via == "None":
+            settings.pop("default_make_mode")
+        else:
+            settings.update({"default_make_mode": via})
     settings._write()
     
 def _try_again(self):

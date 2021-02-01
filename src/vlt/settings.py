@@ -31,6 +31,14 @@ class Settings:
     def update(self, obj):
         self._settings.update(obj)
 
+    def pop(self, obj, r=False):
+        try:
+            item = self._settings.pop(obj)
+        except KeyError:
+            return None
+        if r:
+            return item
+
     def _init_config(self):
         if not os.path.isfile(self.name):
             self._write(obj={"print_format": None})
