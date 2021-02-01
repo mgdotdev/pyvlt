@@ -6,7 +6,6 @@ import sqlite3
 import pandas as pd
 
 from .settings import Settings
-from .encryption import Rosetta
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 

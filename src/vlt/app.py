@@ -125,12 +125,14 @@ def _edit_db(self, *args, **kwargs):
     
 def _export_db(*args, **kwargs):
     path = args[0] or kwargs.get('-p') or kwargs.get('--path') or input(
-        '\nplease enter a directory path to copy the vlt db to:\n$ '
+        '\nplease enter a filepath to copy the vlt db to:\n$ '
     )
+    if not path.endswith('.db'):
+        path += '.db'
     path = os.path.normpath(path)
     settings = Settings()
     if not os.access(os.path.dirname(path), os.W_OK):
-        raise NotADirectoryError("path is not a valid directory.")
+        raise NotADirectoryError("path is not to a valid directory.")
     shutil.copy2(settings["name"], path)       
 
 def _get_from_db(self, *args, **kwargs):
@@ -198,27 +200,26 @@ def _link_db(*args, **kwargs):
                 '$ '
             )
         )
-    settings = Settings()
-    if not settings["archives"]:
+    db = DataBase(key='temp')
+    if not db.settings["archives"]:
         pass
-    elif path in settings["archives"].keys():
-        path = settings["archives"][path]
+    elif path in db.settings["archives"].keys():
+        path = db.settings["archives"][path]
     if not os.path.isfile(path):
-        raise FileNotFoundError('argument passed is not a valid file.')
+        raise FileNotFoundError(f'argument passed ({path}) is not a valid file.')
     if not path.endswith('.db'):
-        raise FileNotFoundError('argument passed should be of filetype .db')
-    if settings["name"]:
-        settings.archive(settings["name"])
-        settings.update({"name": path})
-    else:    
-        settings.update({"name": path})
-    if not db.check_table_exists('settings'):
-        raise LookupError("passed .db file doesn't have <settings> table")
-    if not db.salt:
-        raise LookupError("passed .db file doesn't have a <salt> encryption token")
-    settings._write()
+        raise FileNotFoundError(f'argument passed ({path}) should be of filetype .db')
+    if db.settings["name"]:
+        db.settings.archive(db.settings["name"])
+        db.settings.update({"name": path})
+    else:
+        db.settings.update({"name": path})
+    if not db.check_table_exists('salts'):
+        raise LookupError(f"passed .db file ({path}) doesn't have <salts> table")
+    if not db.table_salt:
+        raise LookupError(f"passed .db file ({path}) doesn't have a <table_salt> encryption token")
+    db.settings._write()
     
-
 def _list_db(*args, **kwargs):
     settings = Settings()
     if "archives" in args:
@@ -342,6 +343,8 @@ def _print_df(df, option=None):
         print('\n')
 
 def _remove_from_db(self, *args, **kwargs):
+    if "all" in args:
+        return _reset(self, "table")
     index = kwargs.get('-i') or kwargs.get('--index') or _get_index(self, "remove")
     df = self.df[self.df.index != self.df.index[int(index)]]
     self.db.update_db(df.applymap(self.rosetta.encrypt))

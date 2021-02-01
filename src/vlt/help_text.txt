@@ -105,9 +105,12 @@ ARGS
 [make]
 
 KWARGS
-        [-v, --via] <hex|uuid|random>   mode for password generation
+        [-v, --via] <hex|uuid|random|*> mode for password generation
         [-l, --length] <INT>            password length
         [-o, --omit] <STRING>           string of characters to omit
+
+* --via can also include any combination of the following strings:
+        lower, upper, alpha, numeric, punctuation
 
 [reset]
 
