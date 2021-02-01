@@ -96,5 +96,5 @@ vlt export /mnt/d/my_vlt.db
 and vlt can link to this file for db I/O
 
 ```
-vlt link 
+vlt link /mnt/d/my_vlt.db
 ```
