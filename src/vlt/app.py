@@ -92,8 +92,10 @@ def _consume_csv(self, *args, **kwargs):
 
 def _dump_to_csv(self, *args, **kwargs):
     path = args[0] or kwargs.get('-p') or kwargs.get('--path') or input(
-        '\nplease enter a directory path to copy the vlt db to:\n$ '
+        '\nplease enter a filepath to copy the vlt db to:\n$ '
     )
+    if not path.endswith('.csv'):
+        path += '.csv'
     path = os.path.normpath(path)
     if not os.access(os.path.dirname(path), os.W_OK):
         raise NotADirectoryError("path is not a valid directory.")
