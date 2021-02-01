@@ -446,7 +446,7 @@ class Session:
         self.df = self.db.get().applymap(self.rosetta.decrypt)
 
     def main(self):
-        action = self.main_action()
+        action = self._main_action()
 
         if action in ('get', '1'):
             _get_from_db(self)
@@ -475,7 +475,7 @@ class Session:
 
 
     def settings_menu(self):
-        settings_action = self.settings_action()
+        settings_action = self._settings_action()
 
         if settings_action in ('1', 'reset key'):
             new_key = getpass('new key:')
