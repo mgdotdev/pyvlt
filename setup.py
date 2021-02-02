@@ -16,22 +16,35 @@ def read_requirements(requirements_file_path):
     data = [i for i in data if not i.startswith("-")]
     return data
 
+with open("README.md", "r") as f:
+    long_description = f.read()
+
 setup(
     author="Michael Green",
+    author_email="1mikegrn@gmail.com",
     classifiers=[
-        "Programming Language :: Python",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "License :: GNU General Public License v3",
         "Topic :: Software Development :: Libraries :: Python Modules",
+        "Operating System :: OS Independent"
     ],
     entry_points={
         'console_scripts': ['vlt=vlt.app:main']
     }, 
     include_package_data=True,
     install_requires=read_requirements("requirements.txt"),
-    name="vlt",     
+    long_description=long_description,
+    long_description_content_type = "text/markdown",
+    name="vlt",
     packages=find_packages(where="src"),
     package_data={"": ['*.txt']},
     package_dir={"": "src"},   
     python_requires='>=3.8',
     tests_require=read_requirements("requirements_testing.txt"),
+    url="https://github.com/1mikegrn/vlt",
     version="0.0.1",
 )
