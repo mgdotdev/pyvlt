@@ -1,1 +1,6 @@
-recursive-include *.txt
+include *.in
+include *.txt
+recursive-include src *.txt
+recursive-include test *.json
+recursive-include test *.py
+recursive-include test *.txt
