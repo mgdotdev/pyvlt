@@ -88,7 +88,7 @@ vlt get -i 1 -k test
 1    bim     buzz     test
 ```
 
-with vlt we can autogenerate strong passwords using `vlt make`. See `vlt --help` for formatting specifics
+with vlt we can autogenerate strong passwords using `vlt make`. See `vlt --help` for formatting specifics under the [make] command.
 
 ```
 vlt make -s fizzbuzz -u michael -fmt v --via alphanumeric --omit 012345 --length 50 -k test
@@ -108,4 +108,10 @@ and vlt can link to this file for db I/O.
 
 ```
 vlt link /mnt/d/my_vlt.db
+vlt get -s fizzbuzz -k test
+
+8.
+  SOURCE: fizzbuzz
+USERNAME: michael
+PASSWORD: tM8eRDwTDwyHkhKRWUmMTNAeRv6OlseFXTKthNLDHlCgPm8GwT
 ```

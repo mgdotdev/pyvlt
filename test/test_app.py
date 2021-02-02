@@ -1,6 +1,8 @@
-import functools
 import os
 import string
+import pandas as pd
+import pyperclip
+import time
 
 from mock import patch
 import pytest
@@ -10,6 +12,7 @@ from vlt.app import (
     _add_to_db,
     _confirm,
     _consume_csv,
+    _copy_to_clipboard,
     _dump_to_csv, 
     _edit_db,
     _get_from_db,
@@ -120,6 +123,29 @@ class TestGet:
         assert actual == expected.data
 
 
+class TestCopy:
+    @property
+    def _df(self):
+        return pd.DataFrame(
+            {
+                'source':["source_0"], 
+                'username': ["username_0"], 
+                'password': ["password_0"]
+            }
+        )
+    def test_copy(self, full_session):
+        with patch('builtins.input', return_value=""):
+            _copy_to_clipboard(full_session, self._df, 's', 'v')
+        assert pyperclip.paste() == ""
+
+    def test_copy_time(self, full_session):
+        start_time = time.time()
+        with patch('builtins.input', return_value=""):
+            _copy_to_clipboard(full_session, self._df, 's', 'v', **{"--time": "3"})
+        assert time.time() - start_time > 3
+        assert pyperclip.paste() == ""
+
+
 class TestMake:
     def test_make(self, session):
         _make_db_entry(session, **{"--source": "test", "--username": "test"})
@@ -138,6 +164,7 @@ class TestMake:
         assert actual[0][0:2] == ["test", "test"]
         assert all(s not in omits for s in actual[0][2])
         assert len(actual[0][2]) == 42
+
 
 class TestRemove:
     def test_remove(self, full_session):

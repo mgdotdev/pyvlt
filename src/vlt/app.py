@@ -6,9 +6,11 @@ import random
 import shutil
 import secrets
 import string
+import time
 import uuid
 
 import pandas as pd
+import pyperclip
 
 from .cmd_reader import reader
 from .encryption import Rosetta
@@ -71,8 +73,10 @@ def _archive(*args, **kwargs):
     settings.archive(archive_file)
     settings._write()
 
-def _confirm():
-    confirm = input('are you sure? This can not be undone. [y/n]\n$ ')
+def _confirm(message="are you sure? This can not be undone."):
+    if not message.endswith(" [y/n]\n$ "):
+        message += " [y/n]\n$ "
+    confirm = input(message)
     if confirm == 'y':
         return True
     return False
@@ -90,6 +94,40 @@ def _consume_csv(self, *args, **kwargs):
     self.db.update_db(df.applymap(self.rosetta.encrypt))
     self.df = df
 
+def _copy_to_clipboard(self, df, cp, format_option, **kwargs):
+    index = df.index.values.tolist()
+    if len(index) > 1:
+        print(
+            "search parameters are ambiguous. "
+            "Consider using the index when copying.\n"
+        )
+        if _confirm("display results of the search?"):
+            _print_df(df, format_option)
+    else:
+        cache_time = kwargs.get("-t") or kwargs.get("--time") or self.settings["cache_time"]
+        mapping = {
+            "s": "source",
+            "u": "username",
+            "p": "password"
+        }
+        for item in cp:
+            pyperclip.copy(df.loc[index[0], mapping[item]])
+            if cache_time:
+                for t in reversed(range(int(float(cache_time)))):
+                    print(
+                        f"{mapping[item]} copied to clipboard."
+                        " {:>5} seconds till next...".format(t), 
+                        end='\r'
+                    )
+                    time.sleep(1)
+                print("")
+            else:
+                input(
+                    f"{mapping[item]} copied to clipboard. "
+                    f"Press Enter to continue...\n"
+                )
+        pyperclip.copy("")
+
 def _dump_to_csv(self, *args, **kwargs):
     path = args[0] or kwargs.get('-p') or kwargs.get('--path') or input(
         '\nplease enter a filepath to copy the vlt db to:\n$ '
@@ -103,7 +141,11 @@ def _dump_to_csv(self, *args, **kwargs):
     df.to_csv(path, index=False)
 
 def _edit_db(self, *args, **kwargs):
-    index = kwargs.get('-i') or kwargs.get('--index') or _get_index(self, "edit")
+    index = (
+        kwargs.get('-i') 
+        or kwargs.get('--index') 
+        or _get_index(self, "edit")
+    )
     index = int(index)
     df = self.db.get().applymap(self.rosetta.decrypt)
     source = kwargs.get('-s') or kwargs.get('--source')
@@ -145,7 +187,8 @@ def _get_from_db(self, *args, **kwargs):
 
     if args == () and not any(
         c in kwargs.keys() for c in (
-            '-i', '--index', '-s', '--source', '-u', '--username', '-p', '--password'
+            '-i', '--index', '-s', '--source', 
+            '-u', '--username', '-p', '--password'
         )
     ):
         args, kwargs = _request_search_terms()
@@ -173,7 +216,16 @@ def _get_from_db(self, *args, **kwargs):
         df = df.loc[df['username'] == username]
     if password:
         df = df.loc[df['password'] == password]
-    _print_df(df, format_option)
+    
+    cp = (
+        kwargs.get('-cp') 
+        or kwargs.get("--clip") 
+        or self.settings['clipboard_settings']
+    )
+    if cp:
+        _copy_to_clipboard(self, df, cp, format_option, **kwargs)
+    else:
+        _print_df(df, format_option)
 
 def _get_index(self, action):
     index = input(

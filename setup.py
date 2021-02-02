@@ -33,6 +33,7 @@ setup(
         "Programming Language :: Python :: 3.9",
         "Topic :: Software Development :: Libraries :: Python Modules" 
     ],
+    description="a python-based password manager",
     entry_points={
         'console_scripts': ['vlt=vlt.app:main']
     }, 
@@ -47,5 +48,5 @@ setup(
     python_requires='>=3.8',
     tests_require=read_requirements("requirements_testing.txt"),
     url="https://github.com/1mikegrn/vlt",
-    version="0.0.1",
+    version="0.0.3",
 )
