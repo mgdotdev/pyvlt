@@ -22,7 +22,7 @@ with vlt installed, we can add our first entry:
 
 this will prompt vlt to ask for your vlt key:
 
-- note: while you *can* pass -k `<KEY>` to vlt, this is **not** recommended, and is only used herein for demonstration purposes
+- note: while you *can* pass -k `<KEY>` to vlt, this is **not** recommended, and is only used herein for demonstration purposes.
 ```
 Please enter your vlt key:
 $ test
@@ -88,12 +88,23 @@ vlt get -i 1 -k test
 1    bim     buzz     test
 ```
 
+with vlt we can autogenerate strong passwords using `vlt make`. See `vlt --help` for formatting specifics
+
+```
+vlt make -s fizzbuzz -u michael -fmt v --via alphanumeric --omit 012345 --length 50 -k test
+
+8.
+  SOURCE: fizzbuzz
+USERNAME: michael
+PASSWORD: tM8eRDwTDwyHkhKRWUmMTNAeRv6OlseFXTKthNLDHlCgPm8GwT
+```
+
 our db file can be exported to a local file directory:
 ```
 vlt export /mnt/d/my_vlt.db
 ```
 
-and vlt can link to this file for db I/O
+and vlt can link to this file for db I/O.
 
 ```
 vlt link /mnt/d/my_vlt.db

@@ -23,14 +23,15 @@ setup(
     author="Michael Green",
     author_email="1mikegrn@gmail.com",
     classifiers=[
+        "Development Status :: 3 - Alpha",
+        "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
+        "Operating System :: OS Independent",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
-        "License :: GNU General Public License v3",
-        "Topic :: Software Development :: Libraries :: Python Modules",
-        "Operating System :: OS Independent"
+        "Topic :: Software Development :: Libraries :: Python Modules" 
     ],
     entry_points={
         'console_scripts': ['vlt=vlt.app:main']

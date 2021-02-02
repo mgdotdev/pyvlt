@@ -109,21 +109,25 @@ KWARGS
         [-l, --length] <INT>            password length
         [-o, --omit] <STRING>           string of characters to omit
 
-* --via can also include any combination of the following strings:
-        lower, upper, alpha, numeric, punctuation
-
-[reset]
+[reset] (requires y/n confirmation)
 
 ARGS
         [table] -> [y/n]                reset/clear table
         [key] -> [y/n]                  change encryption key
-        [db] -> [y/n]                   reset db file (requires y/n confirmation)
+        [db] -> [y/n]                   reset db file
         [app] -> [y/n]                  delete all internal db/config files
 
 [settings]
 
 KWARGS
-        [-fmt, --format] <v|h|df>       print format
+        [-fmt, --format] <v|h|df>       default print format
+        [-l, --lenght] <INT>            default password length
+        [-o, --omit] <STR>              default string of characters to omit
+        [-v, --via] <uuid|hex|random|*> default mode for password generation
+
+
+* --via can also include any combination of the following strings:
+        lower, upper, alpha, numeric, punctuation
 
 ================
 interactive mode
