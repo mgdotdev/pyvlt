@@ -136,7 +136,7 @@ KWARGS:
         [-cp] <s|u|p|**>                copy search/make result to clipboard
         [-t] <INT>                      length of time where copy is active
 
-** any combination of chars is allowed.
+** any combination of chars is allowed. Add 'd' to display before copy sequence.
 
 # ----------------------------- interactive mode ----------------------------- #
 

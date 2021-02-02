@@ -110,6 +110,9 @@ def _copy_to_clipboard(self, df, cp, format_option, **kwargs):
             "u": "username",
             "p": "password"
         }
+        if 'd' in cp:
+            _print_df(df, format_option)
+        cp = cp.replace("d", "")
         for item in cp:
             pyperclip.copy(df.loc[index[0], mapping[item]])
             if cache_time:
