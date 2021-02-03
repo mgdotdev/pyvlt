@@ -45,7 +45,7 @@ setup(
     packages=find_packages(where="src"),
     package_data={"": ['*.txt']},
     package_dir={"": "src"},   
-    python_requires='>=3.8',
+    python_requires='>=3.6',
     tests_require=read_requirements("requirements_testing.txt"),
     url="https://github.com/1mikegrn/vlt",
     version="0.0.4",

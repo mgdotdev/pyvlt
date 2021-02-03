@@ -1,0 +1,11 @@
+
+add/edit/get/remove
+===================
+
+ KWARGS
+- [-i] <INDEX> - relative index of entry to select
+- [-s] <SOURCE> - source to search against in db
+- [-u] <USERNAME> - username to search against in db
+- [-p] <PASSWORD> - password to search against in db       
+        
+

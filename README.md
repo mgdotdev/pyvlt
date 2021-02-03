@@ -71,7 +71,7 @@ searching across multiple terms returns the INNER JOIN of the parameters:
 ```
 vlt add -s this -u buzz -p test -k test
 vlt add -s bam -u buzz -p test -k test
-vlt get -p testing -u buzz
+vlt get -p test -u buzz
 
    source username  password
 1   this     buzz  test
@@ -114,4 +114,20 @@ vlt get -s fizzbuzz -k test
   SOURCE: fizzbuzz
 USERNAME: michael
 PASSWORD: tM8eRDwTDwyHkhKRWUmMTNAeRv6OlseFXTKthNLDHlCgPm8GwT
+```
+
+in vlt, the help menu can be accessed by calling `vlt --help`. The help section for each individual command can also be returned by calling `vlt <CMD> --help`
+
+```
+$ vlt edit --help
+
+add/edit/get/remove
+===================
+
+ KWARGS
+- [-i] <INDEX> - relative index of entry to select
+- [-s] <SOURCE> - source to search against in db
+- [-u] <USERNAME> - username to search against in db
+- [-p] <PASSWORD> - password to search against in db
+
 ```

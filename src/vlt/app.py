@@ -16,19 +16,12 @@ from .cmd_reader import reader
 from .encryption import Rosetta
 from .storage import DataBase
 from .settings import Settings
-
-HERE = os.path.dirname(os.path.abspath(__file__))
-PRINT_FORMAT_SETTINGS = ['df', 'v', 'h']
-TABLE_HEADERS = [' ', 'SOURCE', 'USERNAME', 'PASSWORD']
-DEFAULT_PASSWORD_LENGTH = 42
-MAX_PASSWORD_ITERATIONS = 500
+from .constants import *
 
 def main():
     cmd, args, kwargs = reader()
     if cmd in {'-i', '--interactive'}:
         Session.interactive()
-    elif cmd in {'-h', '--help'}:
-        _help_menu()
     else:
         Session.static(cmd, args, kwargs)
 
@@ -240,10 +233,6 @@ def _get_index(self, action):
         index = _get_index(self, action)
     return index
 
-def _help_menu():
-    with open(os.path.join(HERE, 'help_text.txt'), 'r') as f:
-        print(f.read())
-
 def _link_db(*args, **kwargs):
     if args:
         path = args[0]
@@ -288,6 +277,8 @@ def _list_db(*args, **kwargs):
             print('None')
     elif "name" in args:
         print("    -  " + settings["name"])
+    elif "cmd" in args:
+        print(json.dumps(COMMAND_MAPPING, indent=2, sort_keys=True))
     else:
         print(json.dumps(settings.settings, indent=2, sort_keys=True))
 
