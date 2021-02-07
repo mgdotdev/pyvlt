@@ -218,8 +218,16 @@ def _get_from_db(self, *args, **kwargs):
         or kwargs.get("--clip") 
         or self.settings['clipboard_settings']
     )
+
+    just = (
+        kwargs.get('-j') 
+        or kwargs.get("--just")   
+    )
+
     if cp:
         _copy_to_clipboard(self, df, cp, format_option, **kwargs)
+    elif just:
+        _print_item(df, just, format_option)
     else:
         _print_df(df, format_option)
 
@@ -389,6 +397,21 @@ def _print_df(df, option=None):
                 for item, length in zip(x, max_lengths)
             ]))
         print('\n')
+
+def _print_item(df, just, format_option):
+    object_list = df.values.tolist()
+    if len(object_list) != 1:
+        print("search was ambiguous, can't use <--just> kwarg.\n")
+        _print_df(df, format_option)
+    else:
+        object_list = object_list[0]
+        if just in ('s', 'source'):
+            print(object_list[0])
+        elif just in ('u', 'username'):
+            print(object_list[1])
+        elif just in ('p', 'password'):
+            print(object_list[2])
+
 
 def _remove_from_db(self, *args, **kwargs):
     if "all" in args:

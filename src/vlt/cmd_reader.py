@@ -17,11 +17,13 @@ def _get_help(cmd=""):
 def reader():
     cmd = sys.argv[1]
     args = sys.argv[2::]
+    kwargs = {}
+
     if cmd in ("-h", "--help"):
         return _get_help()
     elif any(h in args for h in ("-h", "--help")):
         return _get_help(cmd)
-    kwargs = {}
+        
     kwarg_keys = reversed([
         index for index, item in enumerate(args) 
         if (item.startswith('-') and simple_isnan(item))

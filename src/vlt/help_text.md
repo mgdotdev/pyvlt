@@ -128,7 +128,8 @@ ARGS:
 ### Miscellanious
 
 KWARGS:
-- `[-cp] <s|u|p|**>` - copy search/make result to clipboard
+- `[-cp, --clip] <s|u|p|**>` - copy search/make result to clipboard
+- `[-j, --just] <s|u|p|>` - return the literal string of the requested object
 - `[-t] <INT>` - length of time where copy is active
 - `[-k, --key] <KEY>` - encryption key (not recommended to pass as flag, if absent vlt will prompt for it.)
 
