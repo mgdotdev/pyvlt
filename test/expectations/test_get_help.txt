@@ -18,19 +18,18 @@ CMD
 ---
 
 [-a, +, add] - add entry to db
-[-ar, archive] - move db to archives
+[-r, archive] - move db to archives
 [-c, consume] - consume csv file to db
+[-cfg, config] - configure vlt settings and defaults
 [-d, dump] - dump db contents to an unencrypted csv file
 [-e, edit] - edit db entry
-[-ex, exp, export] - export db to local directory
+[-x, exp, export] - export db to local directory
 [-g, get] - get entry from db
 [-h, --help] - help menu
-[-l, lnk, link] - link vlt to external db file
-[-ls, ls, list] - list current/archived db's
-[-m, mk, make] - make entry with vlt generated password
-[-rm, rm, -, remove] - remove entry from db
-[-rs, reset] - reset key or table
-[-s, set, settings] - set settings   
+[-l, link] - link vlt to external db file
+[-b, build, mk, make] - make entry with vlt generated password
+[-, rm, remove] - remove entry from db
+[reset] - reset key or table  
 [ipython] - open ipython terminal with self in scope
                                 
 **note** ipython is not a listed vlt requirement, must have previously installed
@@ -87,18 +86,10 @@ KWARGS
 [-f, --file] <FILENAME> - path to database file to link
 [-a, --archive] <INT> - archive number to link to db
 
-[list]
-
-ARGS
-["", all] - list vlt config settings
-[archives] - list archive paths and index values
-[name] - list current db name
-[cmd] - list available vlt command aliases
-
-[make]
+[build]
 
 KWARGS
-[-v, --via] <hex|uuid|random|*> - mode for password generation
+[-m, --mode] <hex|uuid|random|*> - mode for password generation
 [-l, --length] <INT> - password length
 [-o, --omit] <STRING> - string of characters to omit
 
@@ -110,15 +101,20 @@ ARGS
 [db] -> [y/n]  - reset db file
 [app] -> [y/n] - delete all internal db/config files
 
-[settings]
+[config]
 
-KWARGS
+ARGS
+[ls, list] list configuration settings
+    - ["", all] - list all config settings   
+    - [archives] - list archive paths and index values
+    - [name] - list current db name
+    - [cmd] - list available vlt command aliases
 [-fmt, --format] <v|h|df> - default print format
-[-l, --lenght] <INT> - default password length
+[-l, --length] <INT> - default password length
 [-o, --omit] <STR> - default string of characters to omit
-[-v, --via] <uuid|hex|random|*> - default mode for password generation
+[-m, --mode] <uuid|hex|random|*> - default mode for password generation
 
-\* --via can also include any combination of the following strings: lower, upper, alpha, numeric, punctuation
+\* --mode can also include any combination of the following strings: lower, upper, alpha, numeric, punctuation
 
 [ipython]
 
@@ -128,7 +124,8 @@ ARGS:
 Miscellanious
 
 KWARGS:
-[-cp] <s|u|p|**> - copy search/make result to clipboard
+[-cp, --clip] <s|u|p|**> - copy search/make result to clipboard
+[-j, --just] <s|u|p|> - return the literal string of the requested object
 [-t] <INT> - length of time where copy is active
 [-k, --key] <KEY> - encryption key (not recommended to pass as flag, if absent vlt will prompt for it.)
 

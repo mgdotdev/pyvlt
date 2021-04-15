@@ -6,10 +6,11 @@ Things you can do with vlt:
 
 - access vlt directly from command line
 - get, add, edit, and remove vlt entries
+- make new entries/passwords using customizable parameters
 - search vlt by common source, username, and password entries
 - have multiple vlt tables in single vlt db, each with separate encryption key/salt codes
 - store you db files outside vlt, such as in a private git repository
-- link vlt to external vlt db file, such as one on USB drive or in git
+- link vlt to external vlt db files, such as one on USB drive or in git
 - archive db's to keep contents in separate db files
 - consume/dump unencrypted csv files to/from vlt
 
@@ -78,6 +79,15 @@ vlt get -p test -u buzz
 2   bam      buzz  test
 ```
 
+```
+vlt make -s fizzbuzz -u michael -fmt v --mode alphanumeric --omit 012345 --length 50 -k test
+
+8.
+  SOURCE: fizzbuzz
+USERNAME: michael
+PASSWORD: tM8eRDwTDwyHkhKRWUmMTNAeRv6OlseFXTKthNLDHlCgPm8GwT
+```
+
 entries can be edited and/or removed via the entry index
 
 ```
@@ -90,13 +100,15 @@ vlt get -i 1 -k test
 
 with vlt we can autogenerate strong passwords using `vlt make`. See `vlt --help` for formatting specifics under the [make] command.
 
-```
-vlt make -s fizzbuzz -u michael -fmt v --via alphanumeric --omit 012345 --length 50 -k test
+we can furthermore autogenerate new passwords for database entries by passing `-p _` as a password argument.
 
-8.
-  SOURCE: fizzbuzz
-USERNAME: michael
-PASSWORD: tM8eRDwTDwyHkhKRWUmMTNAeRv6OlseFXTKthNLDHlCgPm8GwT
+```
+vlt edit -i 1 -p _ --format v --mode alphanumeric
+  
+1.
+  SOURCE: bim
+USERNAME: buzz
+PASSWORD: TwG8mlHDTXFkLlO6vReANTNhPgCesMmUWRKhtKHywDTwDRe8Mt
 ```
 
 our db file can be exported to a local file directory:
@@ -108,7 +120,7 @@ and vlt can link to this file for db I/O.
 
 ```
 vlt link /mnt/d/my_vlt.db
-vlt get -s fizzbuzz -k test
+vlt get -s fizzbuzz -k test -fmt v
 
 8.
   SOURCE: fizzbuzz

@@ -9,9 +9,9 @@ def simple_isnan(item):
     except ValueError:
         return True
 
-def _get_help(cmd=""):
+def _get_help(cmd="", *args, **kwargs):
     help_menu = HelpMenu()
-    help_menu.get(cmd)
+    help_menu.get(cmd, *args, **kwargs)
     sys.exit()
 
 def reader():
@@ -29,7 +29,10 @@ def reader():
         if (item.startswith('-') and simple_isnan(item))
     ])
     for k in kwarg_keys:
-        value = args.pop(k+1)
+        try:
+            value = args.pop(k+1)
+        except IndexError:
+            value = True
         key = args.pop(k)
         kwargs[key] = value
 

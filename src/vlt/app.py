@@ -159,9 +159,14 @@ def _edit_db(self, *args, **kwargs):
     if username:
         df.loc[index, "username"] = username
     if password:
+        if password == "_":
+            password_length, mode, omits = _get_pwd_args(self, *args, **kwargs)
+            password = _make_password(password_length, mode, omits)
         df.loc[index, "password"] = password
     self.db.update_db(df.applymap(self.rosetta.encrypt))
     self.df = df
+
+    _get_from_db(self, *args, **{"--index": index})
     
 def _export_db(*args, **kwargs):
     path = args[0] or kwargs.get('-p') or kwargs.get('--path') or input(
@@ -209,10 +214,10 @@ def _get_from_db(self, *args, **kwargs):
     if source:
         df = df.loc[df['source'].str.contains(source)]
     if username:
-        df = df.loc[df['username'] == username]
+        df = df.loc[df['username'].str.contains(username)]
     if password:
         df = df.loc[df['password'] == password]
-    
+
     cp = (
         kwargs.get('-cp') 
         or kwargs.get("--clip") 
@@ -284,13 +289,21 @@ def _list_db(*args, **kwargs):
         else:
             print('None')
     elif "name" in args:
-        print("    -  " + settings["name"])
+        print(settings["name"])
     elif "cmd" in args:
-        print(json.dumps(COMMAND_MAPPING, indent=2, sort_keys=True))
+        print(json.dumps(COMMAND_MAPPING, indent=2, sort_keys=True))  
+    elif any(k in kwargs.keys() for k in ('-fmt', "--format")):
+        print(settings["print_format"])
+    elif any(k in kwargs.keys() for k in ('-l', "--length")):
+        print(settings["default_password_length"])
+    elif any(k in kwargs.keys() for k in ('-o', "--omit")):
+        print(settings["default_omit_chars"])
+    elif any(k in kwargs.keys() for k in ('-m', "--mode")):
+        print(settings["default_make_mode"])
     else:
         print(json.dumps(settings.settings, indent=2, sort_keys=True))
 
-def _make_db_entry(self, *args, **kwargs):
+def _get_pwd_args(self, *args, **kwargs):
     password_length = int(
         kwargs.get("-l") 
         or kwargs.get("--length") 
@@ -304,11 +317,15 @@ def _make_db_entry(self, *args, **kwargs):
         or ""
     )
     mode = (
-        kwargs.get("-v") 
-        or kwargs.get("--via") 
+        kwargs.get("-m")
+        or kwargs.get("--mode") 
         or self.settings["default_make_mode"]
         or "random"
     )
+    return password_length, mode, omits    
+
+def _make_db_entry(self, *args, **kwargs):
+    password_length, mode, omits = _get_pwd_args(self, *args, **kwargs)
     kwargs.update({"--password": _make_password(password_length, mode, omits)})
     _add_to_db(self, *args, **kwargs)
     kwargs.update({'--index': -1})
@@ -412,7 +429,6 @@ def _print_item(df, just, format_option):
         elif just in ('p', 'password'):
             print(object_list[2])
 
-
 def _remove_from_db(self, *args, **kwargs):
     if "all" in args:
         return _reset(self, "table")
@@ -496,18 +512,28 @@ def _settings(*args, **kwargs):
             settings.pop("default_omit_chars")
         else:
             settings.update({"default_omit_chars": omits})
-    via = kwargs.get("-v") or kwargs.get("--via")
+    via = kwargs.get("-m") or kwargs.get("--mode")
     if via:
         if via == "None":
             settings.pop("default_make_mode")
         else:
             settings.update({"default_make_mode": via})
     settings._write()
-    
-def _try_again(self):
-    print('\naction not understood. Please try again, or type `exit` or `q` to quit\n')
-    self.main()
 
+def _configure(*args, **kwargs):
+    if not args:
+        return _settings(*args, **kwargs)
+    elif args[0] in ("ls", "list"):
+        return _list_db(*args[1:], **kwargs)
+    _try_again()
+
+def _try_again(self=None):
+    if self:
+        print('\naction not understood. Please try again, or type `exit` or `q` to quit\n')
+        self.main()
+    else:
+        print("command not understood, no action taken.\n")
+    
 
 class Session:
     def __init__(self, key=None, prefix=None, name=None):
@@ -515,6 +541,12 @@ class Session:
         self.db = DataBase(name=name, key=key, settings=self.settings)
         self.rosetta = Rosetta(key=key, salt=self.db.get_salt(self.db.table))
         self.df = self.db.get().applymap(self.rosetta.decrypt)
+
+    @staticmethod
+    def interactive():
+        key = getpass('Please enter your vlt key:\n$ ')
+        self = Session(key)
+        self.main()
 
     def main(self):
         action = self._main_action()
@@ -543,7 +575,6 @@ class Session:
             self.main()
         else:
             _try_again(self)
-
 
     def settings_menu(self):
         settings_action = self._settings_action()
@@ -595,28 +626,21 @@ class Session:
             _try_again(self)
 
     @staticmethod
-    def interactive():
-        key = getpass('Please enter your vlt key:\n$ ')
-        self = Session(key)
-        self.main()
-
-    @staticmethod
     def static(cmd, args, kwargs):
+        if not (args or kwargs):
+            _try_again()
 
-        if cmd in ('-l', 'lnk', 'link'):
+        if cmd in ('-l', 'link'):
             return _link_db(*args, **kwargs)
 
-        if cmd in ('-ex', 'exp', 'export'):
+        if cmd in ('-x', 'export'):
             return _export_db(*args, **kwargs)
 
-        if cmd in ('-ls', 'ls', 'list'):
-            return _list_db(*args, **kwargs)
-
-        if cmd in ('-ar', 'archive'):
+        if cmd in ('-r', 'archive'):
             return _archive(*args, **kwargs)
 
-        if cmd in ('-s', 'set', 'settings'):
-            return _settings(*args, **kwargs)
+        if cmd in ('-cfg', 'config'):
+            return _configure(*args, **kwargs)
 
         key = kwargs.get('-k') or kwargs.get("--key")
         if not key:
@@ -629,7 +653,7 @@ class Session:
         elif cmd in ('+', '-a', 'add'):
             return _add_to_db(self, *args, **kwargs)
 
-        elif cmd in ('-m', 'mk', 'make'):
+        elif cmd in ('-b', 'build', 'mk', 'make'):
             return _make_db_entry(self, *args, **kwargs)
 
         elif cmd in ('-c', 'consume'):
@@ -644,14 +668,14 @@ class Session:
         elif cmd in ('-', '-rm', 'rm', 'remove'):
             return _remove_from_db(self, *args, **kwargs)
 
-        elif cmd in ('-rs', 'reset'):
+        elif cmd in ('reset'):
             return _reset(self, *args, **kwargs)
 
         elif cmd == 'ipython':
             _open_ipython(self)
         
         else:
-            print("command not understood, no action taken.\n")
+            _try_again()
 
     def _main_action(self):
         return input(

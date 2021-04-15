@@ -8,18 +8,17 @@ MAX_PASSWORD_ITERATIONS = 500
 
 COMMAND_MAPPING = {
     "add": ["-a", "+", "add"],
-    "archive": ["-ar", "archive"],
+    "archive": ["-r", "archive"],
     "consume": ["-c", "consume"],
+    "config": ["-cfg", "config"],
     "dump": ["-d", "dump"],
     "edit": ["-e", "edit"],
-    "export": ["-ex", "exp", "export"],
+    "export": ["-x", "export"],
     "get": ["-g", "get"],
     "help": ["-h", "--help"],
-    "link": ["-l", "lnk", "link"],
-    "list": ["-ls", "ls", "list"],
-    "make": ["-m", "mk", "make"],
-    "remove": ["-rm", "rm", "-", "remove"],
-    "reset": ["-rs", "reset"],
-    "settings": ["-s", "set", "settings"],
+    "link": ["-l", "link"],
+    "build": ["-b", "build", "mk", "make"],
+    "remove": ["rm", "-", "remove"],
+    "reset": ["reset"],
     "ipython": ["ipython"]
 }

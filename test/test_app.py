@@ -133,11 +133,14 @@ class TestCopy:
                 'password': ["password_0"]
             }
         )
+
+    @pytest.mark.skip
     def test_copy(self, full_session):
         with patch('builtins.input', return_value=""):
             _copy_to_clipboard(full_session, self._df, 's', 'v')
-        assert pyperclip.paste() == ""
+            assert pyperclip.paste() == ""
 
+    @pytest.mark.skip
     def test_copy_time(self, full_session):
         start_time = time.time()
         with patch('builtins.input', return_value=""):
